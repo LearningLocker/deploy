@@ -112,9 +112,6 @@ function determine_os_version ()
 }
 
 
-#####################################
-# LEARNINGLOCKER SPECIFIC FUNCTIONS #
-#####################################
 # $1 is the path to the install directory
 # $2 is the username to run under
 function setup_init_script ()
@@ -124,68 +121,21 @@ function setup_init_script ()
         exit 0
     fi
 
-    INIT_SCRIPT=/etc/init.d/learninglocker
+    echo -n "[LL] starting base processes...."
+    su - $2 -c "cd $1; pm2 start all.json"
+    echo "done"
 
-    if [[ -f $INIT_SCRIPT ]]; then
-        /etc/init.d/learninglocker stop
-    fi
+    echo -n "[LL] starting xapi process...."
+    su - $2 -c "cd ${1}/xapi; pm2 start xapi.json"
+    echo "done"
 
-
-    cat > $INIT_SCRIPT <<'_EOF'
-#!/bin/sh
-# Start/stop the learninglocker daemon.
-#
-### BEGIN INIT INFO
-# Provides:          learninglocker
-# Required-Start:    $local_fs $remote_fs $network $syslog $named
-# Required-Stop:     $local_fs $remote_fs $network $syslog $named
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Description:       process control for learninglocker-v2
-### END INIT INFO
-
-PATH=/bin:/usr/bin:/sbin:/usr/sbin:${1}
-DESC="learninglocker daemon"
-NAME=learninglocker
-SCRIPTNAME=/etc/init.d/"$NAME"
-HOME={BASEPATH}
-PF={BASEPATH}/all.json
-XAPI_PF={BASEPATH}/xapi/xapi.json
-
-. /lib/lsb/init-functions
-
-case "$1" in
-start)  log_daemon_msg "Starting LL with file: $PF" "learninglocker"
-        su -l {USER} -c "cd ${HOME}; pm2 start $PF; pm2 save"
-        su -l {USER} -c "cd ${HOME}/xapi; pm2 start $XAPI_PF; pm2 save"
-        ;;
-stop)   log_daemon_msg "Stopping LL" "learninglocker"
-        su -l {USER} -c "cd ${HOME}; pm2 stop $PF"
-        su -l {USER} -c "cd ${HOME}/xapi; pm2 stop $XAPI_PF; pm2 save"
-        ;;
-restart) log_daemon_msg "Restarting LL" "learninglocker"
-        su -l {USER} -c "cd ${HOME}; pm2 stop $PF"
-        su -l {USER} -c "cd ${HOME}; pm2 start $PF"
-
-        su -l {USER} -c "cd ${HOME}/xapi; pm2 stop $XAPI_PF; pm2 save"
-        su -l {USER} -c "cd ${HOME}/xapi; pm2 start $XAPI_PF; pm2 save"
-        ;;
-status)
-        su -l {USER} -c "pm2 ls"
-        ;;
-*)      log_action_msg "Usage: /etc/init.d/learninglocker {start|stop|status|restart}"
-        exit 2
-        ;;
-esac
-exit 0
-_EOF
-    # variable susbstitution as it doesn't work doing it directly in the variable above
-    sed -i "s?{BASEPATH}?${1}?g" /etc/init.d/learninglocker
-    sed -i "s/{USER}/${2}/g" /etc/init.d/learninglocker
-
-    chmod +x /etc/init.d/learninglocker
-    chown root:root /etc/init.d/learninglocker
-    update-rc.d learninglocker defaults
+    su - $2 -c "pm2 save"
+    # I'm going to apologise here for the below line - for some reason when executing the resultant command
+    # from the output of pm2 startup, the system $PATH doesn't seem to be set so we have to force it to be
+    # an absolute path before running the command. It also needs to go into a variable and be run rather than
+    # be run within backticks or the path still isn't substituted correctly. I know, right? it's a pain.
+    PM2_STARTUP=$(su - $2 -c "pm2 startup | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
+    $PM2_STARTUP
 }
 
 
@@ -775,17 +725,9 @@ if [[ $LOCAL_INSTALL == true ]]; then
 
 
     # set up init script and run any reprocessing we need
-    RUN_INIT_RELOAD=false
-    if [[ -f /etc/init.d/learninglocker ]]; then
-        RUN_INIT_RELOAD=true
-    fi
     setup_init_script $LOCAL_PATH $LOCAL_USER
-    if [[ $RUN_INIT_RELOAD == true ]]; then
-        systemctl daemon-reload
-    fi
 
-
-    /etc/init.d/learninglocker start
+    service pm2-${LOCAL_USER} start
 elif [[ $PACKAGE_INSTALL == true ]]; then
     # create package
     echo "[LL] Package install"
