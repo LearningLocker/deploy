@@ -11,7 +11,9 @@ function checkCopyDir ()
         path=$1/*
     fi
 
-
+    if [[ $2 != "p" ]]; then
+        echo -n "[LL] copying files..."
+    fi
     for D in $path; do
         if [ -d "${D}" ]; then
 
@@ -24,8 +26,10 @@ function checkCopyDir ()
                 :
             else
                 # actual copy process (recursively)
-                echo "copying ${D}"
-                mkdir ${TMPDIR}/${D}
+                #echo "copying ${D}"
+                if [[ ! -d ${TMPDIR}/${D} ]]; then
+                    mkdir ${TMPDIR}/${D}
+                fi
                 # copy files
                 for F in $D/*; do
                     if [ -f "${F}" ]; then
@@ -34,10 +38,13 @@ function checkCopyDir ()
                 done
 
                 # go recursively into directories
-                checkCopyDir $D
+                checkCopyDir $D p
             fi
         fi
     done
+    if [[ $2 != "p" ]]; then
+        echo "done"
+    fi
 }
 
 
@@ -45,7 +52,7 @@ function determine_os_version ()
 {
     VERSION_FILE=/etc/issue.net
     REDHAT_FILE=/etc/redhat-release
-    RAW_VNO=/etc/centos-release
+    CENTOS_FILE=/etc/centos-release
 
     OS_SUBVER=false
     OS_VERSION=false
@@ -136,6 +143,20 @@ function setup_init_script ()
     # be run within backticks or the path still isn't substituted correctly. I know, right? it's a pain.
     PM2_STARTUP=$(su - $2 -c "pm2 startup | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
     $PM2_STARTUP
+
+    if [[ $OS_SUBVER == "fedora" ]]; then
+        echo "=========================="
+        echo "|         NOTICE         |"
+        echo "=========================="
+        echo "As you're on fedora, you may need to either turn off SELinux (not recommended) or add a rule to allow"
+        echo "access to the PIDFile in /etc/systemd/system/pm2-${2}.service or the startup script will fail to run"
+        echo
+        echo "In addition, you'll need to punch a hole in your firewalld config or disable the firewall with:"
+        echo "  service stop firewalld"
+        echo
+        echo
+        sleep 5
+    fi
 }
 
 
@@ -351,18 +372,80 @@ function debian_nginx ()
     ln -s /etc/nginx/sites-available/learninglocker.conf /etc/nginx/sites-enabled/learninglocker.conf
     cat /etc/nginx/sites-available/learninglocker.conf | sed "s/UI_PORT/${UI_PORT}/" > ${1}/nginx.conf
     mv ${1}/nginx.conf /etc/nginx/sites-available/learninglocker.conf
-    /etc/init.d/nginx restart
+    service nginx restart
 }
 
+
+function debian_mongo ()
+{
+    apt-get install mongodb
+}
+
+
+function debian_redis ()
+{
+    apt-get install redis-tools redis-server
+}
+
+
 #############################
-# REDHAT / CENTOS FUNCTIONS #
+#      REDHAT FUNCTIONS     #
+#############################
+function redhat_redis ()
+{
+    echo "[LL] installing redis"
+    yum install epel-release
+    yum install redis
+}
+
+
+function redhat_mongo ()
+{
+    echo "[LL] installing mongodb"
+    yum install epel-release
+    yum install mongodb-server
+}
+
+
+function redhat_install ()
+{
+    yum install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core
+
+    curl --silent --location https://rpm.nodesource.com/setup_6.x | sudo bash -
+    yum -y install nodejs
+
+    wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo
+    yum install yarn
+}
+
+
+#############################
+#      CENTOS FUNCTIONS     #
 #############################
 function centos_nginx ()
 {
     if [[ ! -d $1 ]]; then
-        echo "[LL] No install directory passed to centos_nginx(), should be impossible - exiting"\
+        echo "[LL] No install directory passed to centos_nginx(), should be impossible - exiting"
         exit 0
     fi
+
+
+    while true; do
+        echo
+        echo "[LL] The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
+        read n
+        if [[ $n == "" ]]; then
+            n="y"
+        fi
+        if [[ $n == "y" ]]; then
+            break
+        elif [[ $n == "n" ]]; then
+            echo "[LL] Can't continue - you'll need to do this step by hand"
+            sleep 5
+            return
+        fi
+    done
+
     # set up repo if needed
     if [[ ! -f /etc/yum.repos.d/nginx.repo ]]; then
         echo "[nginx]" > /etc/yum.repos.d/nginx.repo
@@ -372,15 +455,82 @@ function centos_nginx ()
         echo "enabled=1" >> /etc/yum.repos.d/nginx.repo
     fi
     yum install nginx
+
+    # remove default config if it exists
+    if [[ -f /etc/nginx/conf.d/default.conf ]]; then
+        rm /etc/nginx/conf.d/default.conf
+    fi
+
+    if [[ ! -f ${1}/nginx.conf.example ]]; then
+        echo "[LL] default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
+        read n
+        return
+    fi
+
+    # variable substitution from .env into nginx config - there's a carridge return we need to strip on this
+    UI_PORT=`fgrep UI_PORT .env | sed 's/UI_PORT=//' | sed 's/\r//' `
+    mv ${1}/nginx.conf.example /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s/UI_PORT/${UI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
+    restorecon -v /etc/nginx/conf.d/learninglocker.conf
+
+    echo "[LL] I need to punch a hole in selinux to continue. This is running the command:"
+    echo "         setsebool -P httpd_can_network_connect 1"
+    echo "     press 'y' to continue or 'n' to exit"
+    while true; do
+        read n
+        if [[ $n == "n" ]]; then
+            echo "not doing this, you'll have to run it by hand"
+            sleep 5
+            break
+        elif [[ $n == "y" ]]; then
+            setsebool -P httpd_can_network_connect 1
+            break
+        fi
+    done
+
+    service nginx restart
+}
+
+
+#############################
+#      FEDORA FUNCTIONS     #
+#############################
+function fedora_redis ()
+{
+    echo "[LL] installing redis"
+    yum install redis
+}
+
+
+function fedora_mongo ()
+{
+    echo "[LL] installing mongodb"
+    yum install mongodb-server
 }
 
 
 function fedora_nginx ()
 {
     if [[ ! -d $1 ]]; then
-        echo "[LL] No install directory passed to fedora_nginx(), should be impossible - exiting"\
+        echo "[LL] No install directory passed to fedora_nginx(), should be impossible - exiting"
         exit 0
     fi
+    while true; do
+        echo
+        echo "[LL] The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
+        read n
+        if [[ $n == "" ]]; then
+            n="y"
+        fi
+        if [[ $n == "y" ]]; then
+            break
+        elif [[ $n == "n" ]]; then
+            echo "[LL] Can't continue - you'll need to do this step by hand"
+            sleep 5
+            return
+        fi
+    done
+
     # repos from https://rpmfusion.org/Configuration
     if [[ $OS_VNO == "24" ]]; then
         rpm -Uvh https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-24.noarch.rpm
@@ -395,18 +545,47 @@ function fedora_nginx ()
         exit 0
     fi
     yum install nginx
-}
+
+    echo "[LL] Default fedora nginx config needs the server block in /etc/nginx/nginx.conf removing"
+    echo "     before learninglocker will work properly or it'll clash with the LL config"
+    echo "     Press any key to continue"
+    read n
+
+    if [[ ! -f ${1}/nginx.conf.example ]]; then
+        echo "[LL] default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
+        read n
+        return
+    fi
+
+    # variable substitution from .env into nginx config - there's a carridge return we need to strip on this
+    UI_PORT=`fgrep UI_PORT .env | sed 's/UI_PORT=//' | sed 's/\r//' `
+    mv ${1}/nginx.conf.example /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s/UI_PORT/${UI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
+    restorecon -v /etc/nginx/conf.d/learninglocker.conf
+
+    echo "[LL] I need to punch a hole in selinux to continue. This is running the command:"
+    echo "         setsebool -P httpd_can_network_connect 1"
+    echo "     press 'y' to continue or 'n' to exit"
+    while true; do
+        read n
+        if [[ $n == "n" ]]; then
+            echo "not doing this, you'll have to run it by hand"
+            sleep 5
+            break
+        elif [[ $n == "y" ]]; then
+            setsebool -P httpd_can_network_connect 1
+            break
+        fi
+    done
 
 
-function redhat_install ()
-{
-    yum install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core
+    service nginx restart
 
-    curl --silent --location https://rpm.nodesource.com/setup_6.x | sudo bash -
-    yum -y install nodejs
+    echo "[LL] as you're on CentOS, this may be running with firewalld enabled - you'll either need to punch"
+    echo "     a hole in the firewall rules or disable firewalld (not recommended) to allow inbound access to"
+    echo "     learning locker. Press any key to continue"
+    read n
 
-    wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo
-    yum install yarn
 }
 
 
@@ -512,8 +691,11 @@ if [[ $UPI == false ]]; then
                         done
                     else
                         while true; do
-                            echo "[LL] User '$u' doesn't exist - do you want me to create them ? [y|n]"
+                            echo "[LL] User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
                             read c
+                            if [[ $c == "" ]]; then
+                                c="y"
+                            fi
                             if [[ $c == "y" ]]; then
                                 adduser $u
                                 LOCAL_USER=$u
@@ -617,6 +799,49 @@ if [[ $UPI == false ]]; then
                     break
                 done
             fi
+
+            # check mongo
+            if [[ `command -v mongod` ]]; then
+                echo "[LL] MongoDB is already installed, not installing"
+                sleep 5
+            else
+                while true; do
+                    echo "[LL] MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+                    read c
+                    if [[ $c == "" ]]; then
+                        c="y"
+                    fi
+                    if [[ $c == "y" ]]; then
+                        MONGO_INSTALL=true
+                        break
+                    elif [[ $c == "n" ]]; then
+                        MONGO_INSTALL=false
+                        break
+                    fi
+                done
+            fi
+
+            # check redis
+            if [[ `command -v redis-server` ]]; then
+                echo "[LL] Redis is already installed, not installing"
+                sleep 5
+            else
+                while true; do
+                    echo "[LL] Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+                    read c
+                    if [[ $c == "" ]]; then
+                        c="y"
+                    fi
+                    if [[ $c == "y" ]]; then
+                        REDIS_INSTALL=true
+                        break
+                    elif [[ $c == "n" ]]; then
+                        REDIS_INSTALL=false
+                        break
+                    fi
+                done
+            fi
+
             break
         elif [[ $n == "p" ]]; then
             PACKAGE_INSTALL=true
@@ -689,15 +914,49 @@ checkCopyDir
 if [[ $LOCAL_INSTALL == true ]]; then
     # local install
 
+    # DEBIAN
     if [[ $OS_VERSION == "Debian" ]]; then
         debian_nginx $TMPDIR
+        if [[ $REDIS_INSTALL == true ]]; then
+            debian_mongo
+        fi
+    # UBUNTU
     elif [[ $OS_VERSION == "Ubuntu" ]]; then
         debian_nginx $TMPDIR
+        if [[ $REDIS_INSTALL == true ]]; then
+            debian_redis
+        fi
+        if [[ $MONGO_INSTALL == true ]]; then
+            debian_mongo
+        fi
     elif [[ $OS_VERSION == "Redhat" ]]; then
+    # FEDORA
         if [[ $OS_SUBVER == "Fedora" ]]; then
             fedora_nginx $TMPDIR
+            if [[ $REDIS_INSTALL == true ]]; then
+                fedora_redis
+            fi
+            if [[ $MONGO_INSTALL == true ]]; then
+                fedora_mongo
+            fi
+    # CENTOS
+        elif [[ $OS_SUBVER == "CentOS" ]]; then
+            centos_nginx $TMPDIR
+            if [[ $REDIS_INSTALL == true ]]; then
+                redhat_redis
+            fi
+            if [[ $MONGO_INSTALL == true ]]; then
+                redhat_mongo
+            fi
         else
+    # RHEL / GENERIC REDHAT
             redhat_nginx $TMPDIR
+            if [[ $REDIS_INSTALL == true ]]; then
+                redhat_redis
+            fi
+            if [[ $MONGO_INSTALL == true ]]; then
+                redhat_mongo
+            fi
         fi
     fi
 
