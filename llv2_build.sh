@@ -295,7 +295,6 @@ function xapi_install ()
     fi
 
     # npm
-    chown ht2:ht2 -R /home/ht2/.npm
     echo "[LL] running npm build...."
     while true; do
         CHK=$(npm install)
