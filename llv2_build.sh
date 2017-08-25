@@ -208,7 +208,7 @@ function base_install ()
     fi
 
 
-    echo "[LL] Will now try and clone the git repo. Will prompt for user/pass and may take some time...."
+    echo "[LL] Will now try and clone the git repo for the main learninglocker software. May prompt for user/pass and may take some time...."
     if [[ ! `command -v git` ]]; then
         echo
         echo "Can't find git - can't continue"
@@ -251,7 +251,7 @@ function base_install ()
 
 function xapi_install ()
 {
-    echo "Will now try and clone the git repo. Will prompt for user/pass and may take some time...."
+    echo "Will now try and clone the git repo for XAPI. Will prompt for user/pass and may take some time...."
     # not checking for presence of 'git' command as done in git_clone_base()
 
     DO_XAPI_CHECKOUT=true;
