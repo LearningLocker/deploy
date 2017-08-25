@@ -1,4 +1,17 @@
 #!/bin/bash
+#
+# Copyright (C) 2017 ht2labs
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the
+# GNU General Public License as published by the Free Software Foundation, either version 3 of
+# the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program.
+# If not, see http://www.gnu.org/licenses/.
 
 
 #########################################
@@ -22,8 +35,8 @@ function checkCopyDir ()
                 :
             elif [[ $D =~ .*/src$ ]]; then
                 :
-            elif [ $D == "lib" ]; then
-                :
+            #elif [ $D == "lib" ]; then
+            #    :
             else
                 # actual copy process (recursively)
                 #echo "copying ${D}"
@@ -40,6 +53,8 @@ function checkCopyDir ()
                 # go recursively into directories
                 checkCopyDir $D p
             fi
+        elif [ -f "${D}" ]; then
+            cp $D ${TMPDIR}/${D}
         fi
     done
     if [[ $2 != "p" ]]; then
@@ -72,6 +87,11 @@ function determine_os_version ()
         OS_VERSION="Debian"
     elif [[ $RAW_OS_VERSION == *"Ubuntu"* ]]; then
         OS_VERSION="Ubuntu"
+        OS_VNO=`lsb_release -a | grep Release | awk '{print $2}'`
+        if [[ $OS_VNO == "14.04" ]]; then
+            NODE_OVERRIDE="6.x"
+            PM2_OVERRIDE="ubuntu14"
+        fi
     elif [[ -f $REDHAT_FILE ]]; then
         RAW_OS_VERSION=$(cat $REDHAT_FILE)
         OS_ARCH=$(uname -a | awk '{print $12}')
@@ -119,6 +139,9 @@ function determine_os_version ()
 }
 
 
+#################################################################################
+#                            LEARNINGLOCKER FUNCTIONS                           #
+#################################################################################
 # $1 is the path to the install directory
 # $2 is the username to run under
 function setup_init_script ()
@@ -141,8 +164,8 @@ function setup_init_script ()
     # from the output of pm2 startup, the system $PATH doesn't seem to be set so we have to force it to be
     # an absolute path before running the command. It also needs to go into a variable and be run rather than
     # be run within backticks or the path still isn't substituted correctly. I know, right? it's a pain.
-    PM2_STARTUP=$(su - $2 -c "pm2 startup | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
-    $PM2_STARTUP
+    PM2_STARTUP=$(su - $2 -c "pm2 startup $PM2_OVERRIDE | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
+    CHK=$($PM2_STARTUP)
 
     if [[ $OS_SUBVER == "fedora" ]]; then
         echo "=========================="
@@ -197,7 +220,8 @@ function base_install ()
     # in a while loop to capture the case where a user enters the user/pass incorrectly
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
-            git clone -b release/v2.4.1 https://github.com/LearningLocker/learninglocker_node learninglocker_node
+            #git clone -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker_node learninglocker_node
+            git clone https://github.com/LearningLocker/learninglocker_v2 learninglocker_node
             if [[ -d learninglocker_node ]]; then
                 break
             fi
@@ -211,14 +235,17 @@ function base_install ()
         sleep 5
     fi
 
-
-    yarn install
-    yarn global add pm2@latest
-    yarn add node-sass
-    yarn build-all
-    pm2 install pm2-logrotate
-    pm2 set pm2-logrotate:compress true
-    npm dedupe
+    echo "[LL] running yarn install"
+    CHK=$(yarn install)
+    echo "[LL] adding pm2"
+    CHK=$(yarn global add pm2@latest)
+    echo "[LL] running yarn build-all"
+    CHK=$(yarn build-all)
+    echo "[LL] setting up pm2 logrotate"
+    CHK=$(pm2 install pm2-logrotate)
+    CHK=$(pm2 set pm2-logrotate:compress true)
+    echo "[LL] running npm dedupe"
+    CHK=$(npm dedupe)
 }
 
 
@@ -257,6 +284,7 @@ function xapi_install ()
             fi
         done
     fi
+
     cd xapi/
 
     # sort out .env
@@ -267,8 +295,52 @@ function xapi_install ()
     fi
 
     # npm
-    npm install
-    npm run build
+    chown ht2:ht2 -R /home/ht2/.npm
+    echo "[LL] running npm build...."
+    while true; do
+        CHK=$(npm install)
+        if [[ $CHK == *"ERR"* ]]; then
+            echo "It looks like there was a problem - please check the output above - do you want to retry [y|n|e] (default is 'y', 'e' to exit, 'n' to continue regardless)"
+            while true; do
+                read n
+                if [[ $n == "" ]]; then
+                    n="y"
+                fi
+                if [[ $n == "e" ]]; then
+                    exit 0
+                elif [[ $n == "y" ]]; then
+                    break
+                elif [[ $n == "n" ]]; then
+                    break 2
+                fi
+            done
+        else
+            break
+        fi
+    done
+
+    echo "[LL] running npm run build"
+    while true; do
+        CHK=$(npm run build)
+        if [[ $CHK == *"ERR"* ]]; then
+            echo "It looks like there was a problem - please check the output above - do you want to retry [y|n|e] (default is 'y', 'e' to exit, 'n' to continue regardless)"
+            while true; do
+                read n
+                if [[ $n == "" ]]; then
+                    n="y"
+                fi
+                if [[ $n == "e" ]]; then
+                    exit 0
+                elif [[ $n == "y" ]]; then
+                    break
+                elif [[ $n == "n" ]]; then
+                    break 2
+                fi
+            done
+        else
+            break
+        fi
+    done
 
     cd ../
 }
@@ -317,21 +389,21 @@ function reprocess_pm2 ()
 }
 
 
-#############################
-# DEBIAN / UBUNTU FUNCTIONS #
-#############################
+
+#################################################################################
+#                           DEBIAN / UBUNTU FUNCTIONS                           #
+#################################################################################
 function debian_install ()
 {
-    apt-get install net-tools byobu curl git python build-essential xvfb
+    apt-get -y -qq install net-tools curl git python build-essential xvfb
 
-    curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-    apt-get install nodejs
+    curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | sudo -E bash -
+    apt-get -y -qq install nodejs
 
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-    apt-get update
-    apt-get install yarn
+    apt-get -qq update
+    apt-get -y -qq install yarn
 }
 
 
@@ -357,7 +429,7 @@ function debian_nginx ()
             return
         fi
     done
-    apt-get install -y nginx
+    apt-get -y -qq install nginx
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
         echo "[LL] default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
@@ -378,32 +450,47 @@ function debian_nginx ()
 
 function debian_mongo ()
 {
-    apt-get install mongodb
+    apt-get -y -qq install mongodb
 }
 
 
 function debian_redis ()
 {
-    apt-get install redis-tools redis-server
+    apt-get -y -qq install redis-tools redis-server
 }
 
 
-#############################
-#      REDHAT FUNCTIONS     #
-#############################
+#################################################################################
+#                                REDHAT FUNCTIONS                               #
+#################################################################################
+REDHAT_EPEL_INSTALLED=false
+function redhat_epel ()
+{
+    if [[ $REDHAT_EPEL_INSTALLED == true ]]; then
+        return
+    fi
+    yum install epel-release
+    REDHAT_EPEL_INSTALLED=true
+}
+
+
 function redhat_redis ()
 {
     echo "[LL] installing redis"
-    yum install epel-release
+    redhat_epel
     yum install redis
+    service redis start
 }
 
 
 function redhat_mongo ()
 {
     echo "[LL] installing mongodb"
-    yum install epel-release
+    redhat_epel
+    mkdir -r /data/db
     yum install mongodb-server
+    semanage port -a -t mongod_port_t -p tcp 27017
+    service mongod start
 }
 
 
@@ -411,7 +498,7 @@ function redhat_install ()
 {
     yum install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core
 
-    curl --silent --location https://rpm.nodesource.com/setup_6.x | sudo bash -
+    curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | sudo bash -
     yum -y install nodejs
 
     wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo
@@ -419,9 +506,9 @@ function redhat_install ()
 }
 
 
-#############################
-#      CENTOS FUNCTIONS     #
-#############################
+#################################################################################
+#                                CENTOS FUNCTIONS                               #
+#################################################################################
 function centos_nginx ()
 {
     if [[ ! -d $1 ]]; then
@@ -489,12 +576,17 @@ function centos_nginx ()
     done
 
     service nginx restart
+
+    echo "[LL] as you're on CentOS, this may be running with firewalld enabled - you'll either need to punch"
+    echo "     a hole in the firewall rules or disable firewalld (not recommended) to allow inbound access to"
+    echo "     learning locker. Press any key to continue"
+    read n
 }
 
 
-#############################
-#      FEDORA FUNCTIONS     #
-#############################
+#################################################################################
+#                                FEDORA FUNCTIONS                               #
+#################################################################################
 function fedora_redis ()
 {
     echo "[LL] installing redis"
@@ -581,7 +673,7 @@ function fedora_nginx ()
 
     service nginx restart
 
-    echo "[LL] as you're on CentOS, this may be running with firewalld enabled - you'll either need to punch"
+    echo "[LL] as you're on Fedora, this may be running with firewalld enabled - you'll either need to punch"
     echo "     a hole in the firewall rules or disable firewalld (not recommended) to allow inbound access to"
     echo "     learning locker. Press any key to continue"
     read n
@@ -589,9 +681,15 @@ function fedora_nginx ()
 }
 
 
-#####################################
-#         END OF FUNCTIONS          #
-#####################################
+#################################################################################
+#################################################################################
+#################################################################################
+#                                                                               #
+#                                END OF FUNCTIONS                               #
+#                                                                               #
+#################################################################################
+#################################################################################
+#################################################################################
 
 # before anything, make sure the tmp dir is large enough of get the user to specify a new one
 _TD=/tmp
@@ -616,8 +714,9 @@ fi
 
 
 
-
-# default values
+#################################################################################
+#                                DEFAULT VALUES                                 #
+#################################################################################
 UPI=false
 LOCAL_INSTALL=false
 PACKAGE_INSTALL=false
@@ -627,8 +726,20 @@ LOCAL_PATH=false
 LOCAL_USER=false
 DEFAULT_USER=node
 TMPDIR=$_TD/.tmpdist
+GIT_BRANCH="release/v2.4.1"
 BUILDDIR=$_TD
+MONGO_INSTALLED=false
+REDIS_INSTALLED=false
+PM2_OVERRIDE=false
+NODE_OVERRIDE=false
+NODE_VERSION=8.x
+GIT_ASK=false
 
+
+
+#################################################################################
+#                                 START CHECKS                                  #
+#################################################################################
 
 # cleanup, just in case
 if [ -d $TMPDIR ]; then
@@ -652,11 +763,39 @@ if [[ `whoami` != "root" ]]; then
 fi
 
 
-# if we don't have any user input then lets ask for some
+
+#################################################################################
+#                                 ASK QUESTIONS                                 #
+#################################################################################
 if [[ $UPI == false ]]; then
+    if [[ $GIT_ASK == true ]]; then
+        while true; do
+            echo "[LL] What branch do you want to install ? Press 'enter' for the default of ${GIT_BRANCH}"
+            read -r n
+            if [[ $n == "" ]]; then
+                break
+            else
+                while true; do
+                    echo "[LL] are you sure the branch '${n}' is correct ? [y|n] (press enter for the default of 'y')"
+                    read -r -s -n 1 c
+                    if [[ $c == "" ]]; then
+                        c="y"
+                    fi
+                    if [[ $c == "y" ]]; then
+                        GIT_BRANCH=$n
+                        break 2
+                    elif [[ $c == "n" ]]; then
+                        break
+                    fi
+                done
+            fi
+        done
+    fi
+
     while true; do
-        echo "[LL] Do you want to install this locally(l) or create a package(p) ? [l|p] (enter for default of '${DEFAULT_INSTALL_TYPE}'"
-        read n
+        #echo "[LL] Do you want to install this locally(l) or create a package(p) ? [l|p] (enter for default of '${DEFAULT_INSTALL_TYPE}'"
+        #read -r -s -n 1 n
+        n="l"
         if [[ $n == "" ]]; then
             n=$DEFAULT_INSTALL_TYPE
         fi
@@ -668,7 +807,7 @@ if [[ $UPI == false ]]; then
                 # no CLI value
                 while true; do
                     echo "[LL] I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
-                    read u
+                    read -r u
                     if [[ $u == "" ]]; then
                         u=$DEFAULT_USER
                     fi
@@ -677,7 +816,7 @@ if [[ $UPI == false ]]; then
                         # user exists
                         while true; do
                             echo "[LL] User '$u' already exists - are you sure you want to continue? [y|n] (enter for default of 'y')"
-                            read c
+                            read -r -s -n 1 c
                             if [[ $c == "" ]]; then
                                 c="y"
                             fi
@@ -692,7 +831,7 @@ if [[ $UPI == false ]]; then
                     else
                         while true; do
                             echo "[LL] User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
-                            read c
+                            read -r -s -n 1 c
                             if [[ $c == "" ]]; then
                                 c="y"
                             fi
@@ -715,7 +854,7 @@ if [[ $UPI == false ]]; then
                     # user exists
                     while true; do
                         echo "[LL] User '$LOCAL_USER' already exists - are you sure you want to continue? [y|n]"
-                        read c
+                        read -r -s -n 1 c
                         if [[ $c == "y" ]]; then
                             break
                         elif [[ $c == "n" ]]; then
@@ -726,7 +865,7 @@ if [[ $UPI == false ]]; then
                 else
                     while true; do
                         echo "[LL] User '$LOCAL_USER' doesn't exist - do you want me to create them [y|n]?"
-                        read c
+                        read -r -s -n 1 c
                         if [[ $c == "y" ]]; then
                             adduser $LOCAL_USER
                             break
@@ -745,7 +884,7 @@ if [[ $UPI == false ]]; then
                 if [[ ! -f $LOCAL_PATH ]]; then
                     while true; do
                         echo "[LL] Directory '$p' doesn't exist, do you want to create it ? [y|n]"
-                        read c
+                        read -r -s -n 1 c
                         if [[ $c == "y" ]]; then
                             mkdir -p $c
                         elif [[ $c == "n" ]]; then
@@ -758,7 +897,7 @@ if [[ $UPI == false ]]; then
                 # no path passed on CLI
                 while true; do
                     echo "[LL] What path do you want to install to ? (press enter for the default of $DEFAULT_LOCAL_INSTALL_PATH)"
-                    read p
+                    read -r p
                     if [[ $p == "" ]]; then
                         p=$DEFAULT_LOCAL_INSTALL_PATH
                     fi
@@ -766,7 +905,7 @@ if [[ $UPI == false ]]; then
                     if [[ -d $p ]]; then
                         while true; do
                             echo "[LL] Directory '$p' already exists - should we delete this before continuing ? [y|n] (press 'enter' for the default of 'y')"
-                            read b
+                            read -r -s -n 1 b
                             if [[ $b == "" ]]; then
                                 b="y"
                             fi
@@ -783,7 +922,7 @@ if [[ $UPI == false ]]; then
                     else
                         while true; do
                             echo "[LL] Directory '$p' doesn't exist, do you want to create it ? [y|n] (press 'enter' for default of 'y')"
-                            read c
+                            read -r -s -n 1 c
                             if [[ $c == "" ]]; then
                                 c="y"
                             fi
@@ -803,16 +942,18 @@ if [[ $UPI == false ]]; then
             # check mongo
             if [[ `command -v mongod` ]]; then
                 echo "[LL] MongoDB is already installed, not installing"
+                MONGO_INSTALLED=true
                 sleep 5
             else
                 while true; do
                     echo "[LL] MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
-                    read c
+                    read -r -s -n 1 c
                     if [[ $c == "" ]]; then
                         c="y"
                     fi
                     if [[ $c == "y" ]]; then
                         MONGO_INSTALL=true
+                        MONGO_INSTALLED=true
                         break
                     elif [[ $c == "n" ]]; then
                         MONGO_INSTALL=false
@@ -824,16 +965,18 @@ if [[ $UPI == false ]]; then
             # check redis
             if [[ `command -v redis-server` ]]; then
                 echo "[LL] Redis is already installed, not installing"
+                REDIS_INSTALLED=true
                 sleep 5
             else
                 while true; do
                     echo "[LL] Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
-                    read c
+                    read -r -s -n 1 c
                     if [[ $c == "" ]]; then
                         c="y"
                     fi
                     if [[ $c == "y" ]]; then
                         REDIS_INSTALL=true
+                        REDIS_INSTALLED=true
                         break
                     elif [[ $c == "n" ]]; then
                         REDIS_INSTALL=false
@@ -851,7 +994,16 @@ if [[ $UPI == false ]]; then
 fi
 
 
+#################################################################################
+#                          RUN BASE INSTALL TO TMPDIR                           #
+#################################################################################
 determine_os_version
+
+if [[ $NODE_OVERRIDE != false ]]; then
+    NODE_VERSION=$NODE_OVERRIDE
+fi
+echo "[LL] Installing node version: $NODE_VERSION"
+
 if [[ $OS_VERSION == "Debian" ]]; then
     debian_install
 elif [[ $OS_VERSION == "Ubuntu" ]]; then
@@ -886,7 +1038,7 @@ if [[ ! -f ${BUILDDIR}/learninglocker_node/pm2/all.json ]]; then
     echo "can't copy file '${BUILDDIR}/learninglocker_node/pm2/all.json' as it doesn't exist- exiting"
     exit 0
 fi
-cp ${BUILDDIR}/learninglocker_node/pm2/all.json $TMPDIR/all.json
+cp ${BUILDDIR}/learninglocker_node/pm2/all.json.dist $TMPDIR/all.json
 
 # xapi config
 if [[ ! -f ${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist ]]; then
@@ -906,13 +1058,16 @@ fi
 cp -R ${BUILDDIR}/learninglocker_node/node_modules $TMPDIR/
 
 cp nginx.conf.example $TMPDIR/
-cp .env $TMPDIR/
+cp ${BUILDDIR}/learninglocker_node/.env $TMPDIR/
+cp ${BUILDDIR}/learninglocker_node/xapi/.env $TMPDIR/xapi/
 checkCopyDir
 
 
 
 if [[ $LOCAL_INSTALL == true ]]; then
-    # local install
+    #################################################################################
+    #                                 LOCAL INSTALL                                 #
+    #################################################################################
 
     # DEBIAN
     if [[ $OS_VERSION == "Debian" ]]; then
@@ -973,7 +1128,7 @@ if [[ $LOCAL_INSTALL == true ]]; then
 
 
     reprocess_pm2 $TMPDIR/all.json $LOCAL_PATH $LOG_PATH $PID_PATH
-    reprocess_pm2 $TMPDIR/xapi/xapi.json $LOCAL_PATH $LOG_PATH $PID_PATH
+    reprocess_pm2 $TMPDIR/xapi/xapi.json ${LOCAL_PATH}/xapi $LOG_PATH $PID_PATH
 
 
     mkdir -p $LOCAL_PATH
@@ -987,19 +1142,89 @@ if [[ $LOCAL_INSTALL == true ]]; then
     setup_init_script $LOCAL_PATH $LOCAL_USER
 
     service pm2-${LOCAL_USER} start
+
+    if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ]; then
+        RUN_INSTALL_CMD=false
+        echo "[LL] do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
+        while true; do
+            read n
+            if [[ $n == "" ]]; then
+                n="y"
+            fi
+            if [[ $n == "y" ]]; then
+                while true; do
+                    echo "[LL] please enter the organisation name"
+                    read e
+                    if [[ $e != "" ]]; then
+                        INSTALL_ORG=$e
+                        break
+                    fi
+                done
+                while true; do
+                    echo "[LL] please enter the email address for the administrator account"
+                    read e
+                    if [[ $e != "" ]]; then
+                        INSTALL_EMAIL=$e
+                        break
+                    fi
+                done
+                while true; do
+                    echo "[LL] please enter the password for the administrator account"
+                    read e
+                    if [[ $e != "" ]]; then
+                        INSTALL_PASSWD=$e
+                        break
+                    fi
+                done
+                while true; do
+                    echo "[LL] Is the following information correct ? [y|n]"
+                    echo "     Organisation  : $INSTALL_ORG"
+                    echo "     Email address : $INSTALL_EMAIL"
+                    echo "     Password      : $INSTALL_PASSWD"
+                    read e
+                    if [[ $e == "y" ]]; then
+                        break;
+                    elif [[ $e == "n" ]]; then
+                        continue 2
+                    fi
+                done
+
+                RUN_INSTALL_CMD=true
+                break;
+            elif [[ $n == "n" ]]; then
+                break;
+            fi
+        done
+
+        if [[ $RUN_INSTALL_CMD == true ]]; then
+            d=`pwd`
+            cd $LOCAL_PATH
+            node cli/dist/server createSiteAdmin $INSTALL_EMAIL $INSTALL_ORG $INSTALL_PASSWD
+            cd $d
+        fi
+
+    else
+        echo
+        echo "[LL] Everything is installed but mongoDB & Redis are missing from the local installation. Please edit the .env file"
+        echo "     in $LOCAL_PATH to point to your relevant servers then run this command:"
+        echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
+        echo
+    fi
+
+
 elif [[ $PACKAGE_INSTALL == true ]]; then
-    # create package
+    #################################################################################
+    #                                PACKAGE INSTALL                                #
+    #################################################################################
     echo "[LL] Package install"
-
-
-
-
-
 
 fi
 
 
 
+#################################################################################
+#                                    CLEANUP                                    #
+#################################################################################
 echo "[LL] cleaning up temp directories"
 if [[ -d $TMPDIR ]]; then
     rm -R $TMPDIR
