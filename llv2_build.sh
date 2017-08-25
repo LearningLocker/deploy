@@ -164,7 +164,13 @@ function setup_init_script ()
     # from the output of pm2 startup, the system $PATH doesn't seem to be set so we have to force it to be
     # an absolute path before running the command. It also needs to go into a variable and be run rather than
     # be run within backticks or the path still isn't substituted correctly. I know, right? it's a pain.
-    PM2_STARTUP=$(su - $2 -c "pm2 startup $PM2_OVERRIDE | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
+    echo "[LL] setting up PM2 startup"
+    if [[ $PM2_OVERRIDE != false ]]; then
+        echo "[LL] using PM2 startup override of $PM2_OVERRIDE"
+        PM2_STARTUP=$(su - $2 -c "pm2 startup $PM2_OVERRIDE | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
+    else
+        PM2_STARTUP=$(su - $2 -c "pm2 startup | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
+    fi
     CHK=$($PM2_STARTUP)
 
     if [[ $OS_SUBVER == "fedora" ]]; then
