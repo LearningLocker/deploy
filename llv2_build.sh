@@ -454,6 +454,9 @@ function debian_nginx ()
     ln -s /etc/nginx/sites-available/learninglocker.conf /etc/nginx/sites-enabled/learninglocker.conf
     sed -i "s/UI_PORT/${UI_PORT}/" /etc/nginx/sites-enabled/learninglocker.conf
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" /etc/nginx/sites-enabled/learninglocker.conf
+    sed -i "s?/SITE_ROOT?${1}?" /etc/nginx/sites-enabled/learninglocker.conf
+    sed -i "s?/PHP_SITE_ROOT?${1}?" /etc/nginx/sites-enabled/learninglocker.conf
+    sed -i "s?/SITE_URL?localhost?" /etc/nginx/sites-enabled/learninglocker.conf
     service nginx restart
 }
 
@@ -570,6 +573,9 @@ function centos_nginx ()
     mv ${1}/nginx.conf.example /etc/nginx/conf.d/learninglocker.conf
     sed -i "s/UI_PORT/${UI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s?/SITE_ROOT?${1}?" /etc/nginx/sites-enabled/learninglocker.conf
+    sed -i "s?/PHP_SITE_ROOT?${1}?" /etc/nginx/sites-enabled/learninglocker.conf
+    sed -i "s?/SITE_URL?localhost?" /etc/nginx/sites-enabled/learninglocker.conf
     restorecon -v /etc/nginx/conf.d/learninglocker.conf
 
     echo "[LL] I need to punch a hole in selinux to continue. This is running the command:"
