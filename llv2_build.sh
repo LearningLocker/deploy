@@ -25,7 +25,7 @@ function checkCopyDir ()
     fi
 
     if [[ $2 != "p" ]]; then
-        echo -n "[LL] copying files..."
+        echo -n "[LL] copying files (may take some time)...."
     fi
     for D in $path; do
         if [ -d "${D}" ]; then
@@ -84,8 +84,10 @@ function determine_os_version ()
         OS_SUBVER="Amazon"
         OS_ARCH=$(uname -a | awk '{print $12}')
     elif [[ $RAW_OS_VERSION == *"Debian"* ]]; then
+        NODE_OVERRIDE="6.x"
         OS_VERSION="Debian"
     elif [[ $RAW_OS_VERSION == *"Ubuntu"* ]]; then
+        NODE_OVERRIDE="6.x"
         OS_VERSION="Ubuntu"
         OS_VNO=`lsb_release -a | grep Release | awk '{print $2}'`
         if [[ $OS_VNO == "14.04" ]]; then
@@ -238,6 +240,8 @@ function base_install ()
     if [[ ! -f .env ]]; then
         cp .env.example .env
         echo "[LL] Copied example env to .env - This will need editing by hand"
+        APP_SECRET=`openssl rand -base64 32`
+        sed -i "s/APP_SECRET=/APP_SECRET=${APP_SECRET}/" .env
         sleep 5
     fi
 
@@ -245,7 +249,7 @@ function base_install ()
     CHK=$(yarn install)
     echo "[LL] adding pm2"
     CHK=$(yarn global add pm2@latest)
-    echo "[LL] running yarn build-all"
+    echo "[LL] running yarn build-all (this can take a little while - don't worry, it's not broken)"
     CHK=$(yarn build-all)
     echo "[LL] setting up pm2 logrotate"
     CHK=$(pm2 install pm2-logrotate)
@@ -445,10 +449,11 @@ function debian_nginx ()
     rm /etc/nginx/sites-enabled/*
     # variable substitution from .env into nginx config - there's a carridge return we need to strip on this
     UI_PORT=`fgrep UI_PORT .env | sed 's/UI_PORT=//' | sed 's/\r//' `
+    XAPI_PORT=`fgrep EXPRESS_PORT xapi/.env | sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
     mv ${1}/nginx.conf.example /etc/nginx/sites-available/learninglocker.conf
     ln -s /etc/nginx/sites-available/learninglocker.conf /etc/nginx/sites-enabled/learninglocker.conf
-    cat /etc/nginx/sites-available/learninglocker.conf | sed "s/UI_PORT/${UI_PORT}/" > ${1}/nginx.conf
-    mv ${1}/nginx.conf /etc/nginx/sites-available/learninglocker.conf
+    sed -i "s/UI_PORT/${UI_PORT}/" /etc/nginx/sites-enabled/learninglocker.conf
+    sed -i "s/XAPI_PORT/${XAPI_PORT}/" /etc/nginx/sites-enabled/learninglocker.conf
     service nginx restart
 }
 
@@ -561,8 +566,10 @@ function centos_nginx ()
 
     # variable substitution from .env into nginx config - there's a carridge return we need to strip on this
     UI_PORT=`fgrep UI_PORT .env | sed 's/UI_PORT=//' | sed 's/\r//' `
+    XAPI_PORT=`fgrep EXPRESS_PORT xapi/.env | sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
     mv ${1}/nginx.conf.example /etc/nginx/conf.d/learninglocker.conf
     sed -i "s/UI_PORT/${UI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s/XAPI_PORT/${XAPI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
     restorecon -v /etc/nginx/conf.d/learninglocker.conf
 
     echo "[LL] I need to punch a hole in selinux to continue. This is running the command:"
@@ -764,6 +771,11 @@ fi
 # check if root user
 if [[ `whoami` != "root" ]]; then
     echo "[LL] Sorry, you need to be root or sudo to run this script"
+    exit 0
+fi
+
+if [[ ! `command -v openssl` ]]; then
+    echo "[LL] Sorry but you need openssl installed to install"
     exit 0
 fi
 
@@ -1152,7 +1164,7 @@ if [[ $LOCAL_INSTALL == true ]]; then
         RUN_INSTALL_CMD=false
         echo "[LL] do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
         while true; do
-            read n
+            read -r -s -n 1 n
             if [[ $n == "" ]]; then
                 n="y"
             fi
@@ -1174,19 +1186,36 @@ if [[ $LOCAL_INSTALL == true ]]; then
                     fi
                 done
                 while true; do
-                    echo "[LL] please enter the password for the administrator account"
-                    read e
-                    if [[ $e != "" ]]; then
-                        INSTALL_PASSWD=$e
-                        break
-                    fi
+                    while true; do
+                        echo "[LL] please enter the password for the administrator account"
+                        read -r -s e
+                        if [[ $e != "" ]]; then
+                            INSTALL_PASSWD=$e
+                            break
+                        fi
+                    done
+                    while true; do
+                        echo "[LL] please confirm the password for the administrator account"
+                        read -r -s e
+                        if [[ $e != "" ]]; then
+                            if [[ $e == $INSTALL_PASSWD ]]; then
+                                break 2
+                            else
+                                echo "[LL] Sorry, passwords don't match. Please try again."
+                                sleep 1
+                                break
+                            fi
+                        fi
+                    done
                 done
                 while true; do
-                    echo "[LL] Is the following information correct ? [y|n]"
+                    echo
+                    echo "[LL] Is the following information correct ?"
                     echo "     Organisation  : $INSTALL_ORG"
                     echo "     Email address : $INSTALL_EMAIL"
-                    echo "     Password      : $INSTALL_PASSWD"
-                    read e
+                    #echo "     Password      : $INSTALL_PASSWD"
+                    echo "[y|n]"
+                    read -r -s -n 1 e
                     if [[ $e == "y" ]]; then
                         break;
                     elif [[ $e == "n" ]]; then
