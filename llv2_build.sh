@@ -241,7 +241,7 @@ function base_install ()
         cp .env.example .env
         echo "[LL] Copied example env to .env - This will need editing by hand"
         APP_SECRET=`openssl rand -base64 32`
-        sed -i "s/APP_SECRET=/APP_SECRET=${APP_SECRET}/" .env
+        sed -i "s?APP_SECRET=?APP_SECRET=${APP_SECRET}?" .env
         sleep 5
     fi
 
