@@ -1,6 +1,6 @@
-# LearningLocker OpenSource installer
+# Learning Locker Version 2 Open Source installer
 
-This is the HT2 Learning Locker opensource installer. It's designed to walk you through the process of 
+This is the HT2 Learning Locker open source installer. It's designed to walk you through the process of 
 downloading the code, running any steps needed (such as compilation) and generally setting up a complete 
 working instance. To do this it attempts to detect your operating system, install any software needed
 then pull the code down from Github, run the build steps and install to whichever directory you've 
