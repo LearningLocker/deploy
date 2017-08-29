@@ -11,9 +11,9 @@ Due to the neccesity to install software, you will need to run this script as th
 
 ### QuickStart
 As root run:
-	bash llv2_build.sh
+	`bash llv2_build.sh`
 	or
-	./llv2_build.sh
+	`./llv2_build.sh`
 And just follow the prompts given
 
 
