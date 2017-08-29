@@ -6,6 +6,8 @@ working instance. To do this it attempts to detect your operating system, instal
 then pull the code down from github, run the build steps and install to whichever directory you've 
 specified. You'll be prompted for everything required while you run the script 
 
+Due to the neccesity to install software, you will need to run this script as the root user.
+
 
 ### QuickStart
 As root run
