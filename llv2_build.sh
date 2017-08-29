@@ -101,7 +101,7 @@ function determine_os_version ()
         if [[ $RAW_OS_VERSION == *"CentOS"* ]]; then
             OS_VNO=$(cat $CENTOS_FILE | awk '{print $4}' | tr "." " " | awk '{print $1}')
             if [[ OS_VNO < 6 ]]; then
-                echo "[LL] This version of CentOS isn't supported"
+                echo "[LL] Versions of CentOS prior to CentOS 6 aren't supported"
                 exit 0
             fi
             OS_VERSION="Redhat"
