@@ -190,6 +190,34 @@ function setup_init_script ()
     fi
 }
 
+
+# this function is needed to fix the lack of a CDN in the unicode-json node module. Essentially we check for a unicode
+# file in a set of directories and if it doesn't exist, we create a file
+# $1 is the absolute path to the unicode file we want to copy in
+function unicode_definition_install ()
+{
+    if [[ -f /usr/share/unicode/UnicodeData.txt ]]; then
+        return 0
+    fi
+    if [[ -f /usr/share/unicode-data/UnicodeData.txt ]]; then
+        return 0
+    fi
+    if [[ -f /usr/share/unicode/ucd/UnicodeData.txt ]]; then
+        return 0
+    fi
+
+    if [[ ! -f $1 ]]; then
+        echo "[LL] the path for the unicode file wasn't passed to unicode_definition_install correctly (${1})"
+        sleep 5
+        return 1
+    fi
+
+    mkdir -p /usr/share/unicode
+    cp $1 /usr/share/unicode/UnicodeData.txt
+    chmod 644 /usr/share/unicode/UnicodeData.txt
+}
+
+
 # simple function to check if the version is greater than a specific other version
 # $1 is the version to check
 # $2 is the version to check against
@@ -292,6 +320,10 @@ function base_install ()
         sed -i "s?APP_SECRET=?APP_SECRET=${APP_SECRET}?" .env
         sleep 5
     fi
+
+    echo -n "[LL] checking UnicodeData is present..."
+    unicode_definition_install $PWD/UnicodeData.txt
+    echo "done!"
 
     echo "[LL] running yarn install"
     CHK=$(yarn install)
