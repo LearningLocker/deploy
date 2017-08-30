@@ -229,7 +229,7 @@ function base_install ()
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
             #git clone -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker_node learninglocker_node
-            git clone https://github.com/LearningLocker/learninglocker_v2 learninglocker_node
+            git clone https://github.com/LearningLocker/learninglocker_v2.git learninglocker_node
             if [[ -d learninglocker_node ]]; then
                 break
             fi
@@ -241,7 +241,7 @@ function base_install ()
         cp .env.example .env
         echo "[LL] Copied example env to .env - This will need editing by hand"
         APP_SECRET=`openssl rand -base64 32`
-        sed -i "s/APP_SECRET=/APP_SECRET=${APP_SECRET}/" .env
+        sed -i "s?APP_SECRET=?APP_SECRET=${APP_SECRET}?" .env
         sleep 5
     fi
 
@@ -404,7 +404,15 @@ function reprocess_pm2 ()
 #################################################################################
 function debian_install ()
 {
+    # we run an apt-get update here in case the distro is out of date
+    apt-get update
+
     apt-get -y -qq install net-tools curl git python build-essential xvfb
+
+    if [[ ! `command -v python` ]]; then
+        echo "[LL] Something seems to have gone wrong in installing basic software - exiting"
+        exit 0
+    fi
 
     curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | sudo -E bash -
     apt-get -y -qq install nodejs
@@ -413,6 +421,16 @@ function debian_install ()
     echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
     apt-get -qq update
     apt-get -y -qq install yarn
+
+    if [[ ! `command -v python` ]]; then
+        if [[ `command -v python3` ]]; then
+            echo ["LL] Symlinking python3 to python for Yarn"
+            ln -s `command -v python3` /usr/bin/python
+        else
+            echo "[LL] FATAL Error - can't find python. Path: ${PATH} EUID:${EUID}"
+            exit 0
+        fi
+    fi
 }
 
 
@@ -776,7 +794,12 @@ fi
 
 # check if root user
 if [[ `whoami` != "root" ]]; then
-    echo "[LL] Sorry, you need to be root or sudo to run this script"
+    echo "[LL] Sorry, you need to be root to run this script (currently normal user)"
+    exit 0
+fi
+if [[ $EUID > 0 ]]; then
+    # THIS EUID check checks if we're sudo - I don't want the script to run a sudo for the time being
+    echo "[LL] Sorry, you need to be root to run this script (currently sudo)"
     exit 0
 fi
 
