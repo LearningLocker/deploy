@@ -190,6 +190,15 @@ function setup_init_script ()
     fi
 }
 
+# simple function to check if the version is greater than a specific other version
+# $1 is the version to check
+# $2 is the version to check against
+# returns true if $1 > $2
+function version_check ()
+{
+    test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1";
+}
+
 
 function base_install ()
 {
@@ -223,6 +232,17 @@ function base_install ()
         echo
         exit 0
     fi
+
+    # check if git is too far out of date
+    GIT_VERSION=`git --version | awk '{print $3}'`
+    MIN_GIT_VERSION="1.7.10"
+    echo "[LL] Git version: ${GIT_VERSION}, minimum: $MIN_GIT_VERSION"
+    VCHK=$(version_check $GIT_VERSION $MIN_GIT_VERSION)
+    if [[ $VCHK == false ]]; then
+        echo "[LL] Sorry but your version of git is too old. You should be running a minimum of $MIN_GIT_VERSION"
+        exit 0
+    fi
+
 
 # release/v2.4.1 needs removing later
     # in a while loop to capture the case where a user enters the user/pass incorrectly
