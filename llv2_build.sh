@@ -193,10 +193,37 @@ function setup_init_script ()
 # simple function to check if the version is greater than a specific other version
 # $1 is the version to check
 # $2 is the version to check against
-# returns true if $1 > $2
+# returns '1' if $1>=$2 or '2' otherwise
 function version_check ()
 {
-    test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1";
+    if [[ $1 == $2 ]]
+    then
+        return 1
+    fi
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            return 2
+        fi
+    done
+    return 0
 }
 
 
@@ -237,8 +264,9 @@ function base_install ()
     GIT_VERSION=`git --version | awk '{print $3}'`
     MIN_GIT_VERSION="1.7.10"
     echo "[LL] Git version: ${GIT_VERSION}, minimum: $MIN_GIT_VERSION"
-    VCHK=$(version_check $GIT_VERSION $MIN_GIT_VERSION)
-    if [[ $VCHK == false ]]; then
+    version_check $GIT_VERSION $MIN_GIT_VERSION
+    VCHK=$?
+    if [[ $VCHK == 2 ]]; then
         echo "[LL] Sorry but your version of git is too old. You should be running a minimum of $MIN_GIT_VERSION"
         exit 0
     fi
@@ -783,6 +811,7 @@ LOCAL_USER=false
 DEFAULT_USER=node
 TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="release/v2.4.1"
+MIN_REDIS_VERSION="2.8.11"
 BUILDDIR=$_TD
 MONGO_INSTALLED=false
 REDIS_INSTALLED=false
@@ -1009,7 +1038,6 @@ if [[ $UPI == false ]]; then
             if [[ `command -v mongod` ]]; then
                 echo "[LL] MongoDB is already installed, not installing"
                 MONGO_INSTALLED=true
-                sleep 5
             else
                 while true; do
                     echo "[LL] MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
@@ -1031,8 +1059,17 @@ if [[ $UPI == false ]]; then
             # check redis
             if [[ `command -v redis-server` ]]; then
                 echo "[LL] Redis is already installed, not installing"
-                REDIS_INSTALLED=true
-                sleep 5
+                CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
+                version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
+                REDISCHK=$?
+                if [[ $REDISCHK == 2 ]]; then
+                    echo "[LL] Warning:: this version os redis (${CUR_REDIS_VERSION} is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
+                    sleep 5
+                else
+                    echo "[LL] Redis version (${CUR_REDIS_VERSION}) is above minimum of $MIN_REDIS_VERSION - continuing"
+                    REDIS_INSTALLED=true
+                    sleep 5
+                fi
             else
                 while true; do
                     echo "[LL] Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
@@ -1178,6 +1215,19 @@ if [[ $LOCAL_INSTALL == true ]]; then
             if [[ $MONGO_INSTALL == true ]]; then
                 redhat_mongo
             fi
+        fi
+    fi
+
+    # check redis installed to the right version
+    # if not, then we'll act like we haven't installed it
+    if [[ $REDIS_INSTALL == true ]]; then
+        CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
+        version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
+        REDISCHK=$?
+        if [[ $REDISCHK == 2 ]]; then
+            echo "[LL] Warning:: this version os redis (${CUR_REDIS_VERSION} is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
+            sleep 5
+            REDIS_INSTALLED=false
         fi
     fi
 
