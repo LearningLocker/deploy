@@ -1063,7 +1063,7 @@ if [[ $UPI == false ]]; then
                 version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
                 REDISCHK=$?
                 if [[ $REDISCHK == 2 ]]; then
-                    echo "[LL] Warning:: this version os redis (${CUR_REDIS_VERSION} is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
+                    echo "[LL] Warning:: this version of redis (${CUR_REDIS_VERSION} is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
                     sleep 5
                 else
                     echo "[LL] Redis version (${CUR_REDIS_VERSION}) is above minimum of $MIN_REDIS_VERSION - continuing"
@@ -1225,7 +1225,7 @@ if [[ $LOCAL_INSTALL == true ]]; then
         version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
         REDISCHK=$?
         if [[ $REDISCHK == 2 ]]; then
-            echo "[LL] Warning:: this version os redis (${CUR_REDIS_VERSION} is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
+            echo "[LL] Warning:: this version of redis (${CUR_REDIS_VERSION} is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
             sleep 5
             REDIS_INSTALLED=false
         fi
