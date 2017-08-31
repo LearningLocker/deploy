@@ -84,10 +84,8 @@ function determine_os_version ()
         OS_SUBVER="Amazon"
         OS_ARCH=$(uname -a | awk '{print $12}')
     elif [[ $RAW_OS_VERSION == *"Debian"* ]]; then
-        NODE_OVERRIDE="6.x"
         OS_VERSION="Debian"
     elif [[ $RAW_OS_VERSION == *"Ubuntu"* ]]; then
-        NODE_OVERRIDE="6.x"
         OS_VERSION="Ubuntu"
         OS_VNO=`lsb_release -a | grep Release | awk '{print $2}'`
         if [[ $OS_VNO == "14.04" ]]; then
@@ -598,7 +596,7 @@ function redhat_mongo ()
 {
     echo "[LL] installing mongodb"
     redhat_epel
-    mkdir -r /data/db
+    mkdir -p /data/db
     yum install mongodb-server
     semanage port -a -t mongod_port_t -p tcp 27017
     service mongod start
@@ -671,9 +669,9 @@ function centos_nginx ()
     mv ${1}/nginx.conf.example /etc/nginx/conf.d/learninglocker.conf
     sed -i "s/UI_PORT/${UI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
-    sed -i "s?/SITE_ROOT?${1}?" /etc/nginx/sites-enabled/learninglocker.conf
-    sed -i "s?/PHP_SITE_ROOT?${1}?" /etc/nginx/sites-enabled/learninglocker.conf
-    sed -i "s?SITE_URL?localhost?" /etc/nginx/sites-enabled/learninglocker.conf
+    sed -i "s?/SITE_ROOT?${1}?" /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s?/PHP_SITE_ROOT?${1}?" /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s?SITE_URL?localhost?" /etc/nginx/conf.d/learninglocker.conf
     restorecon -v /etc/nginx/conf.d/learninglocker.conf
 
     echo "[LL] I need to punch a hole in selinux to continue. This is running the command:"
@@ -697,6 +695,61 @@ function centos_nginx ()
     echo "     a hole in the firewall rules or disable firewalld (not recommended) to allow inbound access to"
     echo "     learning locker. Press any key to continue"
     read n
+}
+
+
+#################################################################################
+#                                AMAZON FUNCTIONS                               #
+#################################################################################
+function amazon_nginx ()
+{
+    if [[ ! -d $1 ]]; then
+        echo "[LL] No install directory passed to centos_nginx(), should be impossible - exiting"
+        exit 0
+    fi
+
+
+    while true; do
+        echo
+        echo "[LL] The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
+        read n
+        if [[ $n == "" ]]; then
+            n="y"
+        fi
+        if [[ $n == "y" ]]; then
+            break
+        elif [[ $n == "n" ]]; then
+            echo "[LL] Can't continue - you'll need to do this step by hand"
+            sleep 5
+            return
+        fi
+    done
+
+    yum install nginx
+
+    # remove default config if it exists
+    if [[ -f /etc/nginx/conf.d/default.conf ]]; then
+        rm /etc/nginx/conf.d/default.conf
+    fi
+
+    if [[ ! -f ${1}/nginx.conf.example ]]; then
+        echo "[LL] default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
+        read n
+        return
+    fi
+
+    # variable substitution from .env into nginx config - there's a carridge return we need to strip on this
+    UI_PORT=`fgrep UI_PORT .env | sed 's/UI_PORT=//' | sed 's/\r//' `
+    XAPI_PORT=`fgrep EXPRESS_PORT xapi/.env | sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
+    mv ${1}/nginx.conf.example /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s/UI_PORT/${UI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s/XAPI_PORT/${XAPI_PORT}/" /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s?/SITE_ROOT?${1}?" /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s?/PHP_SITE_ROOT?${1}?" /etc/nginx/conf.d/learninglocker.conf
+    sed -i "s?SITE_URL?localhost?" /etc/nginx/conf.d/learninglocker.conf
+    restorecon -v /etc/nginx/conf.d/learninglocker.conf
+
+    service nginx restart
 }
 
 
@@ -849,7 +902,7 @@ MONGO_INSTALLED=false
 REDIS_INSTALLED=false
 PM2_OVERRIDE=false
 NODE_OVERRIDE=false
-NODE_VERSION=8.x
+NODE_VERSION=6.x
 GIT_ASK=false
 
 
@@ -1238,6 +1291,21 @@ if [[ $LOCAL_INSTALL == true ]]; then
             if [[ $MONGO_INSTALL == true ]]; then
                 redhat_mongo
             fi
+    # AMAZON
+        elif [[ $OS_SUBVER == "Amazon" ]]; then
+            amazon_nginx $TMPDIR
+            if [[ $REDIS_INSTALL == true ]]; then
+                echo "AWS Linux doesn't ship with Redis in a repository. You'll need to install this yourself. Press any key to continue"
+                REDIS_INSTALL=false
+                REDIS_INSTALLED=false
+                read n
+            fi
+            if [[ $MONGO_INSTALL == true ]]; then
+                echo "AWS Linux doesn't ship with MongoDB in a repository. You'll need to install this yourself. Press any key to continue"
+                MONGO_INSTALL=false
+                MONGO_INSTALLED=false
+                read n
+            fi
         else
     # RHEL / GENERIC REDHAT
             redhat_nginx $TMPDIR
@@ -1253,13 +1321,19 @@ if [[ $LOCAL_INSTALL == true ]]; then
     # check redis installed to the right version
     # if not, then we'll act like we haven't installed it
     if [[ $REDIS_INSTALL == true ]]; then
-        CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
-        version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
-        REDISCHK=$?
-        if [[ $REDISCHK == 2 ]]; then
-            echo "[LL] Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
-            sleep 5
+        if [[ ! `command -v redis-server` ]]; then
+            echo "[LL] Warning :: Can't find the redis-server executable, this means it's not been installed when it looks like it should've been. Continuning regardless"
             REDIS_INSTALLED=false
+            sleep 5
+        else
+            CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
+            version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
+            REDISCHK=$?
+            if [[ $REDISCHK == 2 ]]; then
+                echo "[LL] Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
+                REDIS_INSTALLED=false
+                sleep 5
+            fi
         fi
     fi
 
@@ -1344,7 +1418,6 @@ if [[ $LOCAL_INSTALL == true ]]; then
                     echo "[LL] Is the following information correct ?"
                     echo "     Organisation  : $INSTALL_ORG"
                     echo "     Email address : $INSTALL_EMAIL"
-                    #echo "     Password      : $INSTALL_PASSWD"
                     echo "[y|n]"
                     read -r -s -n 1 e
                     if [[ $e == "y" ]]; then
@@ -1370,7 +1443,18 @@ if [[ $LOCAL_INSTALL == true ]]; then
 
     else
         echo
-        echo "[LL] Everything is installed but mongoDB & Redis are missing from the local installation. Please edit the .env file"
+        if [[ $MONGO_INSTALLED == true ]]; then
+            echo "[LL] Mongo: Installed"
+        else
+            echo "[LL] Mongo: Not Installed"
+        fi
+        if [[ $REDIS_INSTALLED == true ]]; then
+            echo "[LL] Redis: Installed"
+        else
+            echo "[LL] Redis: Not Installed"
+        fi
+        echo
+        echo "[LL] Everything is installed but either mongoDB and/or Redis are missing from the local installation. Please edit the .env file"
         echo "     in $LOCAL_PATH to point to your relevant servers then run this command:"
         echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
         echo
