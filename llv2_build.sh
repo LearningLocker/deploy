@@ -1497,6 +1497,9 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     cp ${SYMLINK_PATH}/all.json ${LOCAL_PATH}/all.json
     cp ${SYMLINK_PATH}/xapi/xapi.json ${LOCAL_PATH}/xapi/xapi.json
 
+    # copy anything in the storage dirs over
+    cp ${SYMLINK_PATH}/storage/* ${LOCAL_PATH}/storage/
+
     # prompt user that we're about to do the swap over
     UPDATE_RESTART=false
     UPDATE_RELOAD=false
