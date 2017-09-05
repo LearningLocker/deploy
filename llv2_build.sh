@@ -1498,7 +1498,10 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     cp ${SYMLINK_PATH}/xapi/xapi.json ${LOCAL_PATH}/xapi/xapi.json
 
     # copy anything in the storage dirs over
+    echo -n "[LL] Copying user uploaded data in storage/ folders to new install....."
     cp ${SYMLINK_PATH}/storage/* ${LOCAL_PATH}/storage/
+    cp ${SYMLINK_PATH}/xapi/storage/* ${LOCAL_PATH}/xapi/storage/
+    echo "done!"
 
     # prompt user that we're about to do the swap over
     UPDATE_RESTART=false
