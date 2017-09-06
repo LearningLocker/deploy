@@ -1506,16 +1506,20 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     # prompt user that we're about to do the swap over
     UPDATE_RESTART=false
     UPDATE_RELOAD=false
-    #echo "[LL] As we're upgrading, we need to do a few bits of switching over. This carries a risk of downtime so you have two options now"
-    #echo "     you can select a reload (r) or a complete restart (c). A complete restart will stop running services before starting new ones"
-    #echo "     whereas a reload will attempt to reload with minimal downtime [r|c] (Press enter for the default of 'c')"
-    #echo "     Please note: There's a risk of downtime from the moment you select an option"
-    echo "[LL] As we're upgrading, we need to do a few bits of switching over. This carries a risk of downtime so you should make sure any connections"
-    echo "     to the server are currently stopped (ie: using a load balancer connection drain) if you're in a production environment. This process"
-    echo "     won't start until you press any key to continue"
+    echo "[LL] As we're upgrading, we need to do a few bits of switching over. This carries a risk of downtime so you have two options now"
+    echo "     you can select a reload (r) or a complete restart (c). A complete restart will stop running services before starting new ones"
+    echo "     whereas a reload will attempt to reload with minimal downtime but runs more of a risk of not being totally clean. If you do"
+    echo "     experience any strange effects you should be able to run:"
+    echo "         `service pm2-${LOCAL_USER}` restart"
+    echo "         `service nginx restart`"
+    echo "     which'll cause the system to be completely restarted. [r|c] (Press enter for the default of 'c')"
+    echo "     Please note: There's a risk of downtime from the moment you select an option"
+    #echo "[LL] As we're upgrading, we need to do a few bits of switching over. This carries a risk of downtime so you should make sure any connections"
+    #echo "     to the server are currently stopped (ie: using a load balancer connection drain) if you're in a production environment. This process"
+    #echo "     won't start until you press any key to continue"
     while true; do
         read -r -s -n 1 t
-        t=c
+        #t=c
         if [[ $t == "" ]] || [[ $t == c ]]; then
             UPDATE_RESTART=true
             break
@@ -1540,15 +1544,27 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
         su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}; pm2 start all.json"
         su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/xapi; pm2 start xapi.json"
         su - ${LOCAL_USER} -c "pm2 save"
+        service pm2-${LOCAL_USER} restart
         echo "[LL] PM2 processes restarted"
         echo "[LL] restarting nginx...."
         service nginx start
     fi
 
     # reload only
-    #if [[ $UPDATE_RELOAD == true ]]; then
-    #echo "[LL] Ok, reloading...."
-    #fi
+    if [[ $UPDATE_RELOAD == true ]]; then
+        echo "[LL] Ok, reloading...."
+
+        echo "[LL] re-symlinking directory...."
+        unlink $SYMLINK_PATH
+        ln -s $LOCAL_PATH $SYMLINK_PATH
+
+        echo "[LL] reloading nginx"
+        service nginx reload
+
+        echo "[LL] reloading pm2"
+        service pm2-${LOCAL_USER} reload
+
+    fi
 
 
 elif [[ $PACKAGE_INSTALL == true ]]; then
