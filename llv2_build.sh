@@ -1012,7 +1012,9 @@ if [[ $LOCAL_INSTALL == true ]]; then
                     c="y"
                 fi
                 if [[ $c == "y" ]]; then
-                    adduser $u
+                    echo -n "[LL] Creating user '${u}'...."
+                    useradd -r -s /sbin/nologin $u
+                    echo "done!"
                     LOCAL_USER=$u
                     break
                 elif [[ $c == "n" ]]; then
