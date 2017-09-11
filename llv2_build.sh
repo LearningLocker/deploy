@@ -15,6 +15,22 @@
 
 
 #########################################
+#           PACKING FUNCTIONS           #
+#########################################
+# $1 is the path to the tmp dir
+function apt_package ()
+{
+    echo "creating apt package"
+}
+
+
+function yum_package ()
+{
+    echo "[LL] creating yum package"
+}
+
+
+#########################################
 # GENERIC FUNCTIONS IRRESPECTIVE OF OS  #
 #########################################
 function checkCopyDir ()
@@ -151,6 +167,13 @@ function setup_init_script ()
         exit 0
     fi
 
+    if [[ ! `command -v pm2` ]]; then
+        echo "[LL] Didn't install pm2 or can't find it - the init script will need to be set up by hand. Press any key to continue"
+        read n
+        return
+    fi
+
+
     echo -n "[LL] starting base processes...."
     su - $2 -c "cd $1; pm2 start all.json"
     echo "done"
@@ -266,7 +289,9 @@ function base_install ()
                 n=$DEFAULT_RM_TMP
             fi
             if [[ $n == "y" ]]; then
+                echo -n "[LL] Ok, deleting temp directory...."
                 rm -R learninglocker_node
+                echo "done!"
                 break
             elif [[ $n == "n" ]]; then
                 echo "[LL] ok, not removing it - could cause weirdness though so be warned"
@@ -325,7 +350,8 @@ function base_install ()
     echo "[LL] running yarn install"
     CHK=$(yarn install)
     echo "[LL] adding pm2"
-    CHK=$(yarn global add pm2@latest)
+    #CHK=$(yarn global add pm2@latest) # replacing a yarn install with an npm install as yarn does weird stuff with global installs on debian
+    CHK=$(npm install -g pm2)
     echo "[LL] running yarn build-all (this can take a little while - don't worry, it's not broken)"
     CHK=$(yarn build-all)
     echo "[LL] setting up pm2 logrotate"
@@ -524,10 +550,13 @@ function setup_nginx_config ()
 #################################################################################
 function debian_install ()
 {
+    # debian & ubuntu have a package called cmdtest which we need to uninstall as it'll conflict with yarn
+    apt-get remove cmdtest
+
     # we run an apt-get update here in case the distro is out of date
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update
-        apt-get -y -qq install net-tools curl git python build-essential xvfb
+        apt-get -y -qq install net-tools curl git python build-essential xvfb apt-transport-https
     fi
 
     if [[ ! `command -v python` ]]; then
@@ -536,15 +565,15 @@ function debian_install ()
     fi
 
     if [[ ! `command -v nodejs` ]]; then
-        curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | sudo -E bash -
+        curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash -
         apt-get -y -qq install nodejs
     else
         echo "[LL] Node.js already installed"
     fi
 
     if [[ ! `command -v yarn` ]]; then
-        curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-        echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+        curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+        echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
         apt-get -qq update
         apt-get -y -qq install yarn
     else
@@ -573,7 +602,7 @@ function debian_nginx ()
     while true; do
         echo
         echo "[LL] The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
-        read n
+        read -r -s -n 1 n
         if [[ $n == "" ]]; then
             n="y"
         fi
@@ -658,7 +687,7 @@ function redhat_install ()
     yum install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core
 
     if [[ ! `command -v nodejs` ]]; then
-        curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | sudo bash -
+        curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash -
         yum -y install nodejs
     else
         echo "[LL] Node.js already installed"
@@ -836,10 +865,9 @@ fi
 UPI=false
 LOCAL_INSTALL=false
 PACKAGE_INSTALL=false
-DEFAULT_USER=node
-DEFAULT_LOCAL_INSTALL_PATH=/home/${DEFAULT_USER}/learninglocker
-DEFAULT_SYMLINK_PATH=/home/${DEFAULT_USER}/learninglocker
-DEFAULT_LOCAL_RELEASE_PATH=/home/${DEFAULT_USER}/ll_releases
+DEFAULT_USER=learninglocker
+DEFAULT_SYMLINK_PATH=/usr/local/learninglocker/current
+DEFAULT_LOCAL_RELEASE_PATH=/usr/local/learninglocker/releases
 DEFAULT_INSTALL_TYPE=l
 LOCAL_PATH=false
 LOCAL_USER=false
@@ -857,6 +885,7 @@ GIT_ASK=false
 GIT_REV=false
 RELEASE_PATH=false
 SYMLINK_PATH=false
+MIN_MEMORY=970
 
 
 
@@ -895,6 +924,12 @@ if [[ ! `command -v openssl` ]]; then
     exit 0
 fi
 
+# check system memory (in MB)
+SYSTEM_MEMORY=$(free -m | awk '/^Mem:/{print $2}')
+if [[ $SYSTEM_MEMORY -lt $MIN_MEMORY ]]; then
+    echo "[LL] You need a minimum of ${MIN_MEMORY}Mb of system memory to install Learning Locker - can't continue"
+    exit 0
+fi
 
 
 #################################################################################
@@ -1207,14 +1242,8 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     #################################################################################
 
 
-    # DEBIAN
-    if [[ $OS_VERSION == "Debian" ]]; then
-        debian_nginx $TMPDIR $SYMLINK_PATH
-        if [[ $REDIS_INSTALL == true ]]; then
-            debian_mongo
-        fi
-    # UBUNTU
-    elif [[ $OS_VERSION == "Ubuntu" ]]; then
+    # UBUNTU & DEBIAN
+    if [[ $OS_VERSION == "Ubuntu" ]] || [[ $OS_VERSION == "Debian" ]]; then
         debian_nginx $TMPDIR $SYMLINK_PATH
         if [[ $REDIS_INSTALL == true ]]; then
             debian_redis
@@ -1510,8 +1539,8 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     echo "     you can select a reload (r) or a complete restart (c). A complete restart will stop running services before starting new ones"
     echo "     whereas a reload will attempt to reload with minimal downtime but runs more of a risk of not being totally clean. If you do"
     echo "     experience any strange effects you should be able to run:"
-    echo "         `service pm2-${LOCAL_USER}` restart"
-    echo "         `service nginx restart`"
+    echo "         'service pm2-${LOCAL_USER} restart'"
+    echo "         'service nginx restart'"
     echo "     which'll cause the system to be completely restarted. [r|c] (Press enter for the default of 'c')"
     echo "     Please note: There's a risk of downtime from the moment you select an option"
     #echo "[LL] As we're upgrading, we need to do a few bits of switching over. This carries a risk of downtime so you should make sure any connections"
@@ -1531,6 +1560,8 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
 
     # complete restart
     if [[ $UPDATE_RESTART == true ]]; then
+        PM2_PATH=`command -v pm2`
+
         echo "[LL] Ok, performing a complete restart"
         echo
         echo "[LL] Stopping nginx...."
@@ -1541,9 +1572,9 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
         unlink $SYMLINK_PATH
         ln -s $LOCAL_PATH $SYMLINK_PATH
         echo "[LL] starting PM2 processes...."
-        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}; pm2 start all.json"
-        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/xapi; pm2 start xapi.json"
-        su - ${LOCAL_USER} -c "pm2 save"
+        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}; $PM2_PATH start all.json"
+        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/xapi; $PM2_PATH start xapi.json"
+        su - ${LOCAL_USER} -c "$PM2_PATH save"
         service pm2-${LOCAL_USER} restart
         echo "[LL] PM2 processes restarted"
         echo "[LL] restarting nginx...."
@@ -1572,6 +1603,18 @@ elif [[ $PACKAGE_INSTALL == true ]]; then
     #                                PACKAGE INSTALL                                #
     #################################################################################
     echo "[LL] Package install"
+
+
+
+    # APT
+    if [[ $OS_VERSION == "Debian" ]] || [[ $OS_VERSION == "Ubuntu" ]]; then
+        apt_package $TMPDIR
+    elif [[ $OS_VERSION == "Redhat" ]]; then
+    # Yum
+        yum_package $TMPDIR
+    fi
+
+
 
 else
     echo "[LL] Got to a point which should be impossible - not in a package or local install"
