@@ -352,8 +352,16 @@ function base_install ()
     echo "[LL] adding pm2"
     #CHK=$(yarn global add pm2@latest) # replacing a yarn install with an npm install as yarn does weird stuff with global installs on debian
     CHK=$(npm install -g pm2)
-    echo "[LL] running yarn build-all (this can take a little while - don't worry, it's not broken)"
-    CHK=$(yarn build-all)
+    echo "[LL] running yarn build-all (this can take a little while - don't worry, it's not broken) "
+
+    yarn build-all 2>/dev/null &
+    YARN_PID=$!
+    echo "Yarn pid: $YARN_PID"
+
+    s='-\|/'; i=0; while kill -0 $YARN_PID; do i=$(( (i+1) %4 )); printf "\r${s:$i:1}"; sleep .1; done
+
+    echo ""
+
     echo "[LL] setting up pm2 logrotate"
     CHK=$(pm2 install pm2-logrotate)
     CHK=$(pm2 set pm2-logrotate:compress true)
@@ -1545,9 +1553,6 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     echo "         'service nginx restart'"
     echo "     which'll cause the system to be completely restarted. [r|c] (Press enter for the default of 'c')"
     echo "     Please note: There's a risk of downtime from the moment you select an option"
-    #echo "[LL] As we're upgrading, we need to do a few bits of switching over. This carries a risk of downtime so you should make sure any connections"
-    #echo "     to the server are currently stopped (ie: using a load balancer connection drain) if you're in a production environment. This process"
-    #echo "     won't start until you press any key to continue"
     while true; do
         read -r -s -n 1 t
         #t=c
