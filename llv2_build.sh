@@ -155,6 +155,57 @@ function determine_os_version ()
 }
 
 
+function print_spinner ()
+{
+    pid=$!
+    s='-\|/'
+    i=0
+    while kill -0 $pid 2>/dev/null; do
+        i=$(( (i+1) %4 ));
+        printf "\b${s:$i:1}";
+        sleep .1;
+    done
+    printf "\b.";
+
+    if [[ $1 == true ]]; then
+        echo "done!"
+    fi
+}
+
+
+function output_log ()
+{
+    echo $1 >> $OUTPUT_LOG
+}
+
+
+# $1 is the message
+# $2 is true/false to supress newlines
+# $3 is true/false to supress the [LL] block
+function output ()
+{
+    if [[ $2 == true ]]; then
+        if [[ $3 == true ]]; then
+            echo $1
+            output_log "$1"
+        else
+            MSG="[LL] $1"
+            echo $MSG
+            output_log "$MSG"
+        fi
+    else
+        if [[ $3 == true ]]; then
+            echo $1
+            output_log "$1"
+        else
+            MSG="[LL] $1"
+            echo $MSG
+            output_log "$MSG"
+        fi
+    fi
+}
+
+
 #################################################################################
 #                            LEARNINGLOCKER FUNCTIONS                           #
 #################################################################################
@@ -347,26 +398,33 @@ function base_install ()
     unicode_definition_install $PWD/UnicodeData.txt
     echo "done!"
 
-    echo "[LL] running yarn install"
-    CHK=$(yarn install)
-    echo "[LL] adding pm2"
-    #CHK=$(yarn global add pm2@latest) # replacing a yarn install with an npm install as yarn does weird stuff with global installs on debian
-    CHK=$(npm install -g pm2)
-    echo "[LL] running yarn build-all (this can take a little while - don't worry, it's not broken) "
+    # yarn install
+    echo -n "[LL] running yarn install...."
+    yarn install >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
-    yarn build-all 2>/dev/null &
-    YARN_PID=$!
-    echo "Yarn pid: $YARN_PID"
+    # pm2 - done under npm rather than yarn as yarn does weird stuff on global installs on debian
+    echo -n "[LL] adding pm2...."
+    npm install -g pm2 >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
-    s='-\|/'; i=0; while kill -0 $YARN_PID; do i=$(( (i+1) %4 )); printf "\r${s:$i:1}"; sleep .1; done
+    # yarn build-all
+    echo -n "[LL] running yarn build-all (this can take a little while - don't worry, it's not broken)...."
+    yarn build-all >>$OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
-    echo ""
+    # pm2 logrotate
+    echo -n "[LL] installing pm2 logrotate...."
+    pm2 install pm2-logrotate >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
+    echo -n "[LL] setting up pm2 logrotate...."
+    pm2 set pm2-logrotate:compress true >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
-    echo "[LL] setting up pm2 logrotate"
-    CHK=$(pm2 install pm2-logrotate)
-    CHK=$(pm2 set pm2-logrotate:compress true)
-    echo "[LL] running npm dedupe"
-    CHK=$(npm dedupe)
+    # npm dedupe
+    echo -n "[LL] running npm dedupe...."
+    npm dedupe >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 }
 
 
@@ -415,51 +473,13 @@ function xapi_install ()
     fi
 
     # npm
-    echo "[LL] running npm build...."
-    while true; do
-        CHK=$(npm install)
-        if [[ $CHK == *"ERR"* ]]; then
-            echo "It looks like there was a problem - please check the output above - do you want to retry [y|n|e] (default is 'y', 'e' to exit, 'n' to continue regardless)"
-            while true; do
-                read n
-                if [[ $n == "" ]]; then
-                    n="y"
-                fi
-                if [[ $n == "e" ]]; then
-                    exit 0
-                elif [[ $n == "y" ]]; then
-                    break
-                elif [[ $n == "n" ]]; then
-                    break 2
-                fi
-            done
-        else
-            break
-        fi
-    done
+    echo -n "[LL] running npm install...."
+    npm install >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
-    echo "[LL] running npm run build"
-    while true; do
-        CHK=$(npm run build)
-        if [[ $CHK == *"ERR"* ]]; then
-            echo "It looks like there was a problem - please check the output above - do you want to retry [y|n|e] (default is 'y', 'e' to exit, 'n' to continue regardless)"
-            while true; do
-                read n
-                if [[ $n == "" ]]; then
-                    n="y"
-                fi
-                if [[ $n == "e" ]]; then
-                    exit 0
-                elif [[ $n == "y" ]]; then
-                    break
-                elif [[ $n == "n" ]]; then
-                    break 2
-                fi
-            done
-        else
-            break
-        fi
-    done
+    echo -n "[LL] running npm run build...."
+    npm run build >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
     cd ../
 }
@@ -480,7 +500,9 @@ function nvm_install ()
         done
     fi
 
-    wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
+    echo -n "[LL] running nvm install/update process...."
+    wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 }
 
 
@@ -559,12 +581,12 @@ function setup_nginx_config ()
 function debian_install ()
 {
     # debian & ubuntu have a package called cmdtest which we need to uninstall as it'll conflict with yarn
-    apt-get remove cmdtest
+    apt-get remove cmdtest >> $OUTPUT_LOG 2>>$ERROR_LOG &
 
     # we run an apt-get update here in case the distro is out of date
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
-        apt-get update
-        apt-get -y -qq install net-tools curl git python build-essential xvfb apt-transport-https
+        apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
+        apt-get -y -qq install net-tools curl git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
     fi
 
     if [[ ! `command -v python` ]]; then
@@ -573,17 +595,17 @@ function debian_install ()
     fi
 
     if [[ ! `command -v nodejs` ]]; then
-        curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash -
-        apt-get -y -qq install nodejs
+        curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG
+        apt-get -y -qq install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
         echo "[LL] Node.js already installed"
     fi
 
     if [[ ! `command -v yarn` ]]; then
-        curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+        curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - >> $OUTPUT_LOG 2>>$ERROR_LOG
         echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
-        apt-get -qq update
-        apt-get -y -qq install yarn
+        apt-get -qq update >> $OUTPUT_LOG 2>>$ERROR_LOG
+        apt-get -y -qq install yarn >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
         echo "[LL] yarn already installed"
     fi
@@ -622,7 +644,10 @@ function debian_nginx ()
             return
         fi
     done
-    apt-get -y -qq install nginx
+
+    echo -n "[LL] installing nginx...."
+    apt-get -y -qq install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
         echo "[LL] default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
@@ -646,13 +671,17 @@ function debian_nginx ()
 
 function debian_mongo ()
 {
-    apt-get -y -qq install mongodb
+    echo -n "[LL] installing mongodb...."
+    apt-get -y -qq install mongodb >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 }
 
 
 function debian_redis ()
 {
-    apt-get -y -qq install redis-tools redis-server
+    echo -n "[LL] installing redis...."
+    apt-get -y -qq install redis-tools redis-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 }
 
 
@@ -894,6 +923,9 @@ GIT_REV=false
 RELEASE_PATH=false
 SYMLINK_PATH=false
 MIN_MEMORY=970
+LOG_PATH=/var/log/learninglocker
+OUTPUT_LOG=${LOG_PATH}/install.log
+ERROR_LOG=$OUTPUT_LOG # placeholder - only want one file for now, may be changed later
 
 
 
@@ -937,6 +969,15 @@ SYSTEM_MEMORY=$(free -m | awk '/^Mem:/{print $2}')
 if [[ $SYSTEM_MEMORY -lt $MIN_MEMORY ]]; then
     echo "[LL] You need a minimum of ${MIN_MEMORY}Mb of system memory to install Learning Locker - can't continue"
     exit 0
+fi
+
+# logging
+if [[ ! -d $LOG_PATH ]]; then
+    mkdir -p $LOG_PATH
+fi
+if [[ -f $OUTPUT_LOG ]]; then
+    rm $OUTPUT_LOG
+    touch $OUTPUT_LOG
 fi
 
 
@@ -988,51 +1029,6 @@ done
 #                       LOCAL INSTALL QUESTIONS                       #
 #######################################################################
 if [[ $LOCAL_INSTALL == true ]]; then
-    # determine user to install under
-    while true; do
-        echo "[LL] I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
-        read -r u
-        if [[ $u == "" ]]; then
-            u=$DEFAULT_USER
-        fi
-        USERDATA=`getent passwd $u`
-        if [[ $USERDATA == *"$u"* ]]; then
-            # user exists
-            while true; do
-                echo "[LL] User '$u' already exists - are you sure you want to continue? [y|n] (enter for default of 'y')"
-                read -r -s -n 1 c
-                if [[ $c == "" ]]; then
-                    c="y"
-                fi
-                if [[ $c == "y" ]]; then
-                    LOCAL_USER=$u
-                    break
-                elif [[ $c == "n" ]]; then
-                    echo "[LL] Selected to not continue, exiting"
-                    exit 0
-                fi
-            done
-        else
-            while true; do
-                echo "[LL] User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
-                read -r -s -n 1 c
-                if [[ $c == "" ]]; then
-                    c="y"
-                fi
-                if [[ $c == "y" ]]; then
-                    echo -n "[LL] Creating user '${u}'...."
-                    useradd -r -s /sbin/nologin $u
-                    echo "done!"
-                    LOCAL_USER=$u
-                    break
-                elif [[ $c == "n" ]]; then
-                    echo "[LL] Can't create user - can't continue"
-                    exit 0
-                fi
-            done
-        fi
-        break
-    done
 
     # determine local installation path
     echo "[LL] We require a path to install to and a path to symlink to. The reason for this is that the script can be re-run in order to update"
@@ -1106,6 +1102,57 @@ if [[ $LOCAL_INSTALL == true ]]; then
             # no file currently present - bog standard normal install
             break
         fi
+    done
+
+
+    # determine user to install under
+    while true; do
+        echo "[LL] I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
+        read -r u
+        if [[ $u == "" ]]; then
+            u=$DEFAULT_USER
+        fi
+        USERDATA=`getent passwd $u`
+        if [[ $USERDATA == *"$u"* ]]; then
+            # user exists
+            while true; do
+                echo "[LL] User '$u' already exists - are you sure you want to continue? [y|n] (enter for default of 'y')"
+                read -r -s -n 1 c
+                if [[ $c == "" ]]; then
+                    c="y"
+                fi
+                if [[ $c == "y" ]]; then
+                    LOCAL_USER=$u
+                    break
+                elif [[ $c == "n" ]]; then
+                    echo "[LL] Selected to not continue, exiting"
+                    exit 0
+                fi
+            done
+        else
+            while true; do
+                echo "[LL] User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
+                read -r -s -n 1 c
+                if [[ $c == "" ]]; then
+                    c="y"
+                fi
+                if [[ $c == "y" ]]; then
+                    echo -n "[LL] Creating user '${u}'...."
+                    useradd -r -d $RELEASE_PATH $u
+                    if [[ ! -d $RELEASE_PATH ]]; then
+                        mkdir -p $RELEASE_PATH
+                    fi
+                    chown ${u}:${u} $RELEASE_PATH
+                    echo "done!"
+                    LOCAL_USER=$u
+                    break
+                elif [[ $c == "n" ]]; then
+                    echo "[LL] Can't create user - can't continue"
+                    exit 0
+                fi
+            done
+        fi
+        break
     done
 
 
@@ -1205,7 +1252,7 @@ echo "[LL] creating $TMPDIR"
 mkdir -p $TMPDIR
 
 # package.json
-echo "[LL] copying modules"
+echo -n "[LL] copying modules...."
 if [[ ! -f ${BUILDDIR}/learninglocker_node/package.json ]]; then
     echo "can't copy file '${BUILDDIR}/learninglocker_node/package.json' as it doesn't exist- exiting"
     exit 0
@@ -1234,7 +1281,8 @@ if [[ ! -d ${BUILDDIR}/learninglocker_node/node_modules ]]; then
     echo "can't copy directory '${BUILDDIR}/learninglocker_node/node_modules' as it doesn't exist- exiting"
     exit 0
 fi
-cp -R ${BUILDDIR}/learninglocker_node/node_modules $TMPDIR/
+cp -R ${BUILDDIR}/learninglocker_node/node_modules $TMPDIR/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
+print_spinner true
 
 cp nginx.conf.example $TMPDIR/
 cp ${BUILDDIR}/learninglocker_node/.env $TMPDIR/
@@ -1379,12 +1427,8 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
 
     # set up the pid & log directories
-    LOG_PATH=/var/log/learninglocker
     PID_PATH=/var/run
-    if [[ ! -d $LOG_PATH ]]; then
-        mkdir -p $LOG_PATH
-    fi
-    chown ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
+    chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
 
 
     reprocess_pm2 $TMPDIR/all.json $SYMLINK_PATH $LOG_PATH $PID_PATH
@@ -1510,10 +1554,12 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     if [[ -d $LOCAL_PATH ]]; then
         echo "[LL] the release directory in $LOCAL_PATH already exists - creating a new directory"
         i=0
+        POSSIBLE_PATH=$LOCAL_PATH
         while true; do
             i=$((i + 1))
-            LOCAL_PATH=${LOCAL_PATH}_${i}
-            if [[ ! -d $LOCAL_PATH ]]; then
+            POSSIBLE_PATH=${LOCAL_PATH}_${i}
+            if [[ ! -d $POSSIBLE_PATH ]]; then
+                LOCAL_PATH=$POSSIBLE_PATH
                 echo "[LL] Created release directory: $LOCAL_PATH"
                 break
             fi
@@ -1539,6 +1585,9 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     # copy anything in the storage dirs over
     echo -n "[LL] Copying user uploaded data in storage/ folders to new install....."
     cp -nR ${SYMLINK_PATH}/storage/* ${LOCAL_PATH}/storage/
+    if [[ ! -d ${LOCAL_PATH}/xapi/storage ]]; then
+        mkdir -p ${LOCAL_PATH}/xapi/storage
+    fi
     cp -nR ${SYMLINK_PATH}/xapi/storage/* ${LOCAL_PATH}/xapi/storage/
     echo "done!"
 
