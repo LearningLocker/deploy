@@ -10,10 +10,15 @@ Due to the necessity to install software, you will need to run this script as th
 
 
 ### QuickStart
-To download and run the installation, you can run the following command as the root user, then follow the prompts given.
+To install or update Learning Locker, run the install script as the root user, via. one of the commands below. Then, follow the prompts given.
 
+**Install with cURL:**
 ```sh
-wget -qO- https://raw.githubusercontent.com/LearningLocker/deploy/master/llv2_build.sh | bash
+curl -o- https://bit.ly/ll-v2-install | bash
+```
+**Install with Wget**:
+```sh
+wget -qO- https://bit.ly/ll-v2-install | bash
 ```
 
 Alternatively, you can download the "llv2_build.sh" file from this repository and run the following command as the root user, then follow the prompts given.
