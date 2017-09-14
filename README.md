@@ -10,12 +10,17 @@ Due to the necessity to install software, you will need to run this script as th
 
 
 ### QuickStart
-As root run:
-	`bash llv2_build.sh`
-	or
-	`./llv2_build.sh`
-And just follow the prompts given
+To download and run the installation, you can run the following command as the root user, then follow the prompts given.
 
+```sh
+wget -qO- https://raw.githubusercontent.com/LearningLocker/deploy/master/llv2_build.sh | bash
+```
+
+Alternatively, you can download the "llv2_build.sh" file from this repository and run the following command as the root user, then follow the prompts given.
+
+```sh
+bash llv2_build.sh
+```
 
 ### Configuration
 The software creates a `.env` file in your install directory and within the `xapi/` sub-directory. You can
