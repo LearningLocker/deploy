@@ -10,7 +10,7 @@ Due to the necessity to install software, you will need to run this script as th
 
 
 ### QuickStart
-To install or update Learning Locker, run the install script as the root user, via. one of the commands below. Then, follow the prompts given.
+To install or update Learning Locker, run the install script as the root user, via one of the commands below. Then, follow the prompts given.
 
 **Install with cURL:**
 ```sh
