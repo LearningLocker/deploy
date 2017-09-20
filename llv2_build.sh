@@ -884,7 +884,7 @@ function amazon_mongo ()
     echo "gpgcheck=1" >> $MONGO_REPO_FILE
     echo "enabled=1" >> $MONGO_REPO_FILE
     echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc" >> $MONGO_REPO_FILE
-    yum -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
+    yum -y install mongodb-org
 }
 
 
