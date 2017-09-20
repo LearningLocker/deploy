@@ -188,6 +188,7 @@ function output_log ()
 # $1 is the message
 # $2 is true/false to supress newlines
 # $3 is true/false to supress the [LL] block
+# $4 is the number of whitespace characters to insert before the text (not working yet)
 function output ()
 {
     if [[ $2 == true ]]; then
@@ -209,6 +210,43 @@ function output ()
             output_log "$MSG"
         fi
     fi
+}
+
+
+# simple function to check if the version is greater than a specific other version
+# $1 is the version to check
+# $2 is the version to check against
+# returns '1' if $1>=$2 or '2' otherwise
+function version_check ()
+{
+    if [[ $1 == $2 ]]
+    then
+        return 1
+    fi
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            return 2
+        fi
+    done
+    return 0
 }
 
 
@@ -297,43 +335,6 @@ function unicode_definition_install ()
 }
 
 
-# simple function to check if the version is greater than a specific other version
-# $1 is the version to check
-# $2 is the version to check against
-# returns '1' if $1>=$2 or '2' otherwise
-function version_check ()
-{
-    if [[ $1 == $2 ]]
-    then
-        return 1
-    fi
-    local IFS=.
-    local i ver1=($1) ver2=($2)
-    # fill empty fields in ver1 with zeros
-    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
-    do
-        ver1[i]=0
-    done
-    for ((i=0; i<${#ver1[@]}; i++))
-    do
-        if [[ -z ${ver2[i]} ]]
-        then
-            # fill empty fields in ver2 with zeros
-            ver2[i]=0
-        fi
-        if ((10#${ver1[i]} > 10#${ver2[i]}))
-        then
-            return 1
-        fi
-        if ((10#${ver1[i]} < 10#${ver2[i]}))
-        then
-            return 2
-        fi
-    done
-    return 0
-}
-
-
 function base_install ()
 {
     # if the checkout dir exists, prompt the user for what to do
@@ -378,15 +379,13 @@ function base_install ()
         exit 0
     fi
 
-    output "Will now try and clone the git repo for the main learninglocker software. May prompt for user/pass and may take some time...."
+    output "Will now try and clone the git repo for the main learninglocker software. May take some time...."
 
-# release/v2.4.1 needs removing later
     # in a while loop to capture the case where a user enters the user/pass incorrectly
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
-            #git clone -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker_node learninglocker_node
             output_log "running git clone"
-            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker_v2.git learninglocker_node
+            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker learninglocker_node
             if [[ -d learninglocker_node ]]; then
                 output_log "no learninglocker_node dir after git - problem"
                 break
@@ -398,7 +397,9 @@ function base_install ()
     GIT_REV=`git rev-parse --verify HEAD`
     if [[ ! -f .env ]]; then
         cp .env.example .env
-        output "Copied example env to .env - This will need editing by hand"
+        if [[ $UPDATE_MODE == false ]]; then
+            output "Copied example env to .env - This will need editing by hand"
+        fi
         APP_SECRET=`openssl rand -base64 32`
         sed -i "s?APP_SECRET=?APP_SECRET=${APP_SECRET}?" .env
     fi
@@ -481,7 +482,9 @@ function xapi_install ()
     # sort out .env
     if [[ ! -f .env ]]; then
         cp .env.example .env
-        output "Copied example env to .env - This will need editing by hand"
+        if [[ $UPDATE_MODE == false ]]; then
+            output "Copied example env to .env - This will need editing by hand"
+        fi
     fi
 
     # npm
@@ -849,9 +852,9 @@ function redhat_nginx ()
     service nginx restart
 
     if [[ $OS_SUBVER == "CentOS" ]]; then
-        echo "[LL] as you're on CentOS, this may be running with firewalld enabled - you'll either need to punch"
-        echo "     a hole in the firewall rules or disable firewalld (not recommended) to allow inbound access to"
-        echo "     learning locker. Press any key to continue"
+        output "as you're on CentOS, this may be running with firewalld enabled - you'll either need to punch"
+        output "a hole in the firewall rules or disable firewalld (not recommended) to allow inbound access to" false false 5
+        output "learning locker. Press any key to continue" false false 5
         read n
     fi
 }
@@ -869,7 +872,7 @@ function amazon_mongo ()
 {
     MONGO_REPO_FILE=/etc/yum.repos.d/mongodb-org-3.4.repo
 
-    echo "[LL] setting up mongo repo in $MONGO_REPO_FILE"
+    output "setting up mongo repo in $MONGO_REPO_FILE"
 
     echo "[mongodb-org-3.4]" > $MONGO_REPO_FILE
     echo "name=MongoDB Repository" > $MONGO_REPO_FILE
@@ -877,7 +880,7 @@ function amazon_mongo ()
     echo "gpgcheck=1" > $MONGO_REPO_FILE
     echo "enabled=1" > $MONGO_REPO_FILE
     echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc" > $MONGO_REPO_FILE
-    yum install -y mongodb-org
+    yum install -y mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
 
@@ -886,15 +889,15 @@ function amazon_mongo ()
 #################################################################################
 function fedora_redis ()
 {
-    echo "[LL] installing redis"
-    yum install redis
+    output "installing redis"
+    yum install redis >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
 
 function fedora_mongo ()
 {
-    echo "[LL] installing mongodb"
-    yum install mongodb-server
+    output "installing mongodb"
+    yum install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
 
@@ -944,7 +947,7 @@ DEFAULT_INSTALL_TYPE=l
 LOCAL_PATH=false
 LOCAL_USER=false
 TMPDIR=$_TD/.tmpdist
-GIT_BRANCH="master"
+GIT_BRANCH="v2"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
 BUILDDIR=$_TD
@@ -1633,7 +1636,7 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     #################################################################################
 
     if [[ -d $LOCAL_PATH ]]; then
-        echo "[LL] the release directory in $LOCAL_PATH already exists - creating a new directory"
+        output "the release directory in $LOCAL_PATH already exists - creating a new directory"
         i=0
         POSSIBLE_PATH=$LOCAL_PATH
         while true; do
@@ -1641,11 +1644,11 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
             POSSIBLE_PATH=${LOCAL_PATH}_${i}
             if [[ ! -d $POSSIBLE_PATH ]]; then
                 LOCAL_PATH=$POSSIBLE_PATH
-                echo "[LL] Created release directory: $LOCAL_PATH"
+                output "Created release directory: $LOCAL_PATH"
                 break
             fi
             if [[ $i -gt 20 ]]; then
-                echo "[LL] more than 20 installs today - this looks like something has gone wrong, exiting"
+                output "more than 20 installs today - this looks like something has gone wrong, exiting"
                 exit 0
             fi
         done
@@ -1656,21 +1659,27 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     cp -R $TMPDIR/* $LOCAL_PATH/
 
     # copy the .env from the existing install over to the new path
+    output "Copying existing config to new version"
     cp ${SYMLINK_PATH}/.env ${LOCAL_PATH}/.env
     cp ${SYMLINK_PATH}/xapi/.env ${LOCAL_PATH}/xapi/.env
+
+    # copy the existing .git over
+    if [[ -d ${SYMLINK_PATH}/.git ]]; then
+        cp -R ${SYMLINK_PATH}/.git ${LOCAL_PATH}/
+    fi
 
     # copy the pm2 files from existing install over
     cp ${SYMLINK_PATH}/all.json ${LOCAL_PATH}/all.json
     cp ${SYMLINK_PATH}/xapi/xapi.json ${LOCAL_PATH}/xapi/xapi.json
 
     # copy anything in the storage dirs over
-    echo -n "[LL] Copying user uploaded data in storage/ folders to new install....."
+    output "Copying user uploaded data in storage/ folders to new install....." true
     cp -nR ${SYMLINK_PATH}/storage/* ${LOCAL_PATH}/storage/
     if [[ ! -d ${LOCAL_PATH}/xapi/storage ]]; then
         mkdir -p ${LOCAL_PATH}/xapi/storage
     fi
     cp -nR ${SYMLINK_PATH}/xapi/storage/* ${LOCAL_PATH}/xapi/storage/
-    echo "done!"
+    output "done!" false true
 
     # prompt user that we're about to do the swap over
     UPDATE_RESTART=false
