@@ -377,8 +377,7 @@ function base_install ()
     # in a while loop to capture the case where a user enters the user/pass incorrectly
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
-            #git clone -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker_node learninglocker_node
-            git clone -q https://github.com/LearningLocker/learninglocker_v2.git learninglocker_node
+            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker learninglocker_node
             if [[ -d learninglocker_node ]]; then
                 break
             fi
@@ -909,7 +908,7 @@ DEFAULT_INSTALL_TYPE=l
 LOCAL_PATH=false
 LOCAL_USER=false
 TMPDIR=$_TD/.tmpdist
-GIT_BRANCH="master"
+GIT_BRANCH="v2"
 MIN_REDIS_VERSION="2.8.11"
 BUILDDIR=$_TD
 MONGO_INSTALLED=false
