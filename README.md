@@ -28,11 +28,11 @@ To install or update Learning Locker, run the install script via one of the comm
 
 **Install with cURL**
 ```sh
-curl -o- -L http://lrnloc.kr/installv2 | bash
+curl -o- -L http://lrnloc.kr/installv2 > deployll.sh && bash ./deployll.sh
 ```
 **Install with Wget**:
 ```sh
-wget -qO- http://lrnloc.kr/installv2 | bash
+wget -qO deployll.sh http://lrnloc.kr/installv2 && bash ./deployll.sh
 ```
 
 Alternatively, you can download the "llv2_build.sh" file from this repository and run the following command as the root user, then follow the prompts given.
