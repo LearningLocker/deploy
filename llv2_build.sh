@@ -181,7 +181,9 @@ function print_spinner ()
 
 function output_log ()
 {
-    echo $1 >> $OUTPUT_LOG
+    if [[ -f $OUTPUT_LOG ]]; then
+        echo $1 >> $OUTPUT_LOG
+    fi
 }
 
 
