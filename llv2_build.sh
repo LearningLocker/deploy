@@ -759,9 +759,11 @@ function redhat_mongo ()
 
 function redhat_install ()
 {
-    yum install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG
+    output "installing base software"
+    yum -y install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG
 
     if [[ ! `command -v nodejs` ]]; then
+        output "setting up nodejs repo and installing nodejs"
         curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash -
         yum -y install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
@@ -769,8 +771,9 @@ function redhat_install ()
     fi
 
     if [[ ! `command -v yarn` ]]; then
+        output "setting up yarn repo and installing yarn"
         wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo >> $OUTPUT_LOG 2>>$ERROR_LOG
-        yum install yarn >> $OUTPUT_LOG 2>>$ERROR_LOG
+        yum -y install yarn >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
         output "yarn already installed"
     fi
@@ -780,27 +783,28 @@ function redhat_install ()
 function redhat_nginx ()
 {
     if [[ ! -d $1 ]]; then
-        echo "[LL] No temp directory passed to centos_nginx(), should be impossible - exiting"
+        output "No temp directory passed to centos_nginx(), should be impossible - exiting"
         exit 0
     fi
 
     while true; do
         echo
-        echo "[LL] The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
+        output "The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
         read n
+        output_log "user pressed '${n}'"
         if [[ $n == "" ]]; then
             n="y"
         fi
         if [[ $n == "y" ]]; then
             break
         elif [[ $n == "n" ]]; then
-            echo "[LL] Can't continue - you'll need to do this step by hand"
+            output "Can't continue - you'll need to do this step by hand"
             sleep 5
             return
         fi
     done
 
-    yum install nginx
+    yum -y install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG
 
     # remove default config if it exists
     if [[ -f /etc/nginx/conf.d/default.conf ]]; then
@@ -816,7 +820,7 @@ function redhat_nginx ()
 
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
-        echo "[LL] default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
+        output "default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
         read n
         return
     fi
