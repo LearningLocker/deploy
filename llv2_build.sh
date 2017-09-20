@@ -701,7 +701,7 @@ function debian_mongo ()
             output "Setting up mongo repo (Stock Ubuntu version is too old)"
             apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
             echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
-            apt-get UPDATE >> $OUTPUT_LOG 2>>$ERROR_LOG
+            apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
         fi
     else
@@ -946,6 +946,7 @@ LOCAL_USER=false
 TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
+MIN_MONGO_VERSION="3.0.0"
 BUILDDIR=$_TD
 MONGO_INSTALLED=false
 REDIS_INSTALLED=false
@@ -1205,7 +1206,18 @@ if [[ $LOCAL_INSTALL == true ]]; then
     # check mongo
     if [[ `command -v mongod` ]]; then
         output "MongoDB is already installed, not installing"
-        MONGO_INSTALLED=true
+        CUR_MONGO_VERSION=`mongod --version | grep "db version" | sed "s?db version v??"`
+        output_log "mongo version currently installed: $CUR_MONGO_VERSION"
+        version_check $CUR_MONGO_VERSION $MIN_MONGO_VERSION
+        MONGOCHK=$?
+        output_log "mongo check is $MONGOCHK"
+        if [[ $MONGOCHK == 2 ]]; then
+            output "Warning:: this version of mongo (${CUR_MONGO_VERSION}) is below the minimum requirement of ${MIN_MONGO_VERSION} - you'll need to update this yourself"
+            sleep 5
+        else
+            output "Mongo version (${CUR_MONGO_VERSION}) is above minimum of $MIN_MONGO_VERSION - continuing"
+            MONGO_INSTALLED=true
+        fi
     else
         while true; do
             output "MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
@@ -1230,8 +1242,8 @@ if [[ $LOCAL_INSTALL == true ]]; then
     if [[ `command -v redis-server` ]]; then
         output "Redis is already installed, not installing"
         CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
-        version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
         output_log "Redis Version: $CUR_REDIS_VERSION"
+        version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
         REDISCHK=$?
         if [[ $REDISCHK == 2 ]]; then
             output "Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
