@@ -99,8 +99,10 @@ function determine_os_version ()
         OS_VERSION="Redhat"
         OS_SUBVER="Amazon"
         OS_ARCH=$(uname -a | awk '{print $12}')
+        output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
     elif [[ $RAW_OS_VERSION == *"Debian"* ]]; then
         OS_VERSION="Debian"
+        output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
     elif [[ $RAW_OS_VERSION == *"Ubuntu"* ]]; then
         OS_VERSION="Ubuntu"
         OS_VNO=`lsb_release -a | grep Release | awk '{print $2}'`
@@ -108,6 +110,7 @@ function determine_os_version ()
             NODE_OVERRIDE="6.x"
             PM2_OVERRIDE="ubuntu14"
         fi
+        output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
     elif [[ -f $REDHAT_FILE ]]; then
         RAW_OS_VERSION=$(cat $REDHAT_FILE)
         OS_ARCH=$(uname -a | awk '{print $12}')
@@ -120,13 +123,15 @@ function determine_os_version ()
             fi
             OS_VERSION="Redhat"
             OS_SUBVER="CentOS"
+            output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
         # RHEL
         elif [[ $RAW_OS_VERSION == *"Red Hat Enterprise Linux"* ]]; then
             OS_VERSION="Redhat"
             OS_SUBVER="RHEL"
             OS_VNO=$(cat $REDHAT_FILE | awk '{print $7}')
+            output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
             echo
-            echo "[LL] Sorry, we don't support RHEL at the moment"
+            output "Sorry, we don't support RHEL at the moment"
             echo
 
         # Fedora
@@ -134,22 +139,23 @@ function determine_os_version ()
             OS_VERSION="Redhat"
             OS_SUBVER="Fedora"
             OS_VNO=$(cat $REDHAT_FILE | awk '{print $3}')
+            output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
             if [[ OS_VNO < 24 ]]; then
                 echo
-                echo "[LL] Sorry, we don't support this version of Fedora at the moment"
+                output "Sorry, we don't support this version of Fedora at the moment"
                 echo
                 exit 0
             fi
 
         # unknown redhat - bail
         else
-            echo "[LL] Only set up for debian/ubuntu/centos at the moment I'm afraid - exiting"
+            output "Only set up for debian/ubuntu/centos at the moment I'm afraid - exiting"
             exit 0
         fi
     fi
 
     if [[ ! $OS_VERSION ]]; then
-        echo "[LL] Couldn't determind version from $VERSION_FILE, unknown OS: $RAW_OS_VERSION"
+        output "Couldn't determind version from $VERSION_FILE, unknown OS: $RAW_OS_VERSION"
         exit 0
     fi
 }
@@ -168,7 +174,7 @@ function print_spinner ()
     printf "\b.";
 
     if [[ $1 == true ]]; then
-        echo "done!"
+        output "done!" false true
     fi
 }
 
@@ -186,11 +192,11 @@ function output ()
 {
     if [[ $2 == true ]]; then
         if [[ $3 == true ]]; then
-            echo $1
+            echo -n $1
             output_log "$1"
         else
             MSG="[LL] $1"
-            echo $MSG
+            echo -n $MSG
             output_log "$MSG"
         fi
     else
@@ -214,33 +220,33 @@ function output ()
 function setup_init_script ()
 {
     if [[ ! -d $1 ]]; then
-        echo "[LL] path to install directory (${1}) wasn't a valid directory in setup_init_script(), exiting"
+        output "path to install directory (${1}) wasn't a valid directory in setup_init_script(), exiting"
         exit 0
     fi
 
     if [[ ! `command -v pm2` ]]; then
-        echo "[LL] Didn't install pm2 or can't find it - the init script will need to be set up by hand. Press any key to continue"
+        output "Didn't install pm2 or can't find it - the init script will need to be set up by hand. Press any key to continue"
         read n
         return
     fi
 
 
-    echo -n "[LL] starting base processes...."
+    output "starting base processes...." true
     su - $2 -c "cd $1; pm2 start all.json"
-    echo "done"
+    output "done" true true
 
-    echo -n "[LL] starting xapi process...."
+    output "starting xapi process...." true
     su - $2 -c "cd ${1}/xapi; pm2 start xapi.json"
-    echo "done"
+    output "done" true true
 
     su - $2 -c "pm2 save"
     # I'm going to apologise here for the below line - for some reason when executing the resultant command
     # from the output of pm2 startup, the system $PATH doesn't seem to be set so we have to force it to be
     # an absolute path before running the command. It also needs to go into a variable and be run rather than
     # be run within backticks or the path still isn't substituted correctly. I know, right? it's a pain.
-    echo "[LL] setting up PM2 startup"
+    output "setting up PM2 startup"
     if [[ $PM2_OVERRIDE != false ]]; then
-        echo "[LL] using PM2 startup override of $PM2_OVERRIDE"
+        output "using PM2 startup override of $PM2_OVERRIDE"
         PM2_STARTUP=$(su - $2 -c "pm2 startup $PM2_OVERRIDE | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
     else
         PM2_STARTUP=$(su - $2 -c "pm2 startup | grep sudo | sed 's?sudo ??' | sed 's?\$PATH?$PATH?'")
@@ -248,6 +254,7 @@ function setup_init_script ()
     CHK=$($PM2_STARTUP)
 
     if [[ $OS_SUBVER == "fedora" ]]; then
+        output_log "fedora detected, SELinux may get in the way"
         echo "=========================="
         echo "|         NOTICE         |"
         echo "=========================="
@@ -279,7 +286,7 @@ function unicode_definition_install ()
     fi
 
     if [[ ! -f $1 ]]; then
-        echo "[LL] the path for the unicode file wasn't passed to unicode_definition_install correctly (${1})"
+        output "the path for the unicode file wasn't passed to unicode_definition_install correctly (${1})"
         sleep 5
         return 1
     fi
@@ -334,18 +341,18 @@ function base_install ()
     DO_BASE_INSTALL=true
     if [[ -d learninglocker_node ]]; then
         while true; do
-            echo "[LL] Temp directory already exists for checkout - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
+            output "Temp directory already exists for checkout - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
             read -r -s -n 1 n
             if [[ $n == "" ]]; then
                 n=$DEFAULT_RM_TMP
             fi
             if [[ $n == "y" ]]; then
-                echo -n "[LL] Ok, deleting temp directory...."
+                output "Ok, deleting temp directory...." true
                 rm -R learninglocker_node
-                echo "done!"
+                output "done!" false true
                 break
             elif [[ $n == "n" ]]; then
-                echo "[LL] ok, not removing it - could cause weirdness though so be warned"
+                output "ok, not removing it - could cause weirdness though so be warned"
                 sleep 5
                 DO_BASE_INSTALL=false
                 break
@@ -355,7 +362,7 @@ function base_install ()
 
     if [[ ! `command -v git` ]]; then
         echo
-        echo "Can't find git - can't continue"
+        output "Can't find git - can't continue"
         echo
         exit 0
     fi
@@ -363,23 +370,25 @@ function base_install ()
     # check if git is too far out of date
     GIT_VERSION=`git --version | awk '{print $3}'`
     MIN_GIT_VERSION="1.7.10"
-    echo "[LL] Git version: ${GIT_VERSION}, minimum: $MIN_GIT_VERSION"
+    output "Git version: ${GIT_VERSION}, minimum: $MIN_GIT_VERSION"
     version_check $GIT_VERSION $MIN_GIT_VERSION
     VCHK=$?
     if [[ $VCHK == 2 ]]; then
-        echo "[LL] Sorry but your version of git is too old. You should be running a minimum of $MIN_GIT_VERSION"
+        output "Sorry but your version of git is too old. You should be running a minimum of $MIN_GIT_VERSION"
         exit 0
     fi
 
-    echo "[LL] Will now try and clone the git repo for the main learninglocker software. May prompt for user/pass and may take some time...."
+    output "Will now try and clone the git repo for the main learninglocker software. May prompt for user/pass and may take some time...."
 
 # release/v2.4.1 needs removing later
     # in a while loop to capture the case where a user enters the user/pass incorrectly
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
             #git clone -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker_node learninglocker_node
-            git clone -q https://github.com/LearningLocker/learninglocker_v2.git learninglocker_node
+            output_log "running git clone"
+            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker_v2.git learninglocker_node
             if [[ -d learninglocker_node ]]; then
+                output_log "no learninglocker_node dir after git - problem"
                 break
             fi
         done
@@ -389,40 +398,40 @@ function base_install ()
     GIT_REV=`git rev-parse --verify HEAD`
     if [[ ! -f .env ]]; then
         cp .env.example .env
-        echo "[LL] Copied example env to .env - This will need editing by hand"
+        output "Copied example env to .env - This will need editing by hand"
         APP_SECRET=`openssl rand -base64 32`
         sed -i "s?APP_SECRET=?APP_SECRET=${APP_SECRET}?" .env
     fi
 
-    echo -n "[LL] checking UnicodeData is present..."
+    output "checking UnicodeData is present..." true
     unicode_definition_install $PWD/UnicodeData.txt
-    echo "done!"
+    output "done!" false true
 
     # yarn install
-    echo -n "[LL] running yarn install...."
+    output "running yarn install...." true
     yarn install >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     # pm2 - done under npm rather than yarn as yarn does weird stuff on global installs on debian
-    echo -n "[LL] adding pm2...."
+    output "adding pm2...." true
     npm install -g pm2 >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     # yarn build-all
-    echo -n "[LL] running yarn build-all (this can take a little while - don't worry, it's not broken)...."
+    output "running yarn build-all (this can take a little while - don't worry, it's not broken)...." true
     yarn build-all >>$OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     # pm2 logrotate
-    echo -n "[LL] installing pm2 logrotate...."
+    output "installing pm2 logrotate...." true
     pm2 install pm2-logrotate >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
-    echo -n "[LL] setting up pm2 logrotate...."
+    output "setting up pm2 logrotate...." true
     pm2 set pm2-logrotate:compress true >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     # npm dedupe
-    echo -n "[LL] running npm dedupe...."
+    output "running npm dedupe...." true
     npm dedupe >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 }
@@ -430,15 +439,16 @@ function base_install ()
 
 function xapi_install ()
 {
-    echo "[LL] Will now try and clone the git repo for XAPI. Will prompt for user/pass and may take some time...."
+    output "Will now try and clone the git repo for XAPI. Will prompt for user/pass and may take some time...."
     # not checking for presence of 'git' command as done in git_clone_base()
 
     DO_XAPI_CHECKOUT=true;
     if [[ -d xapi ]]; then
         DEFAULT_RM_TMP="y"
         while true; do
-            echo "[LL] Tmp directory already exists for checkout of xapi - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
+            output "Tmp directory already exists for checkout of xapi - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
             read n
+            output_log "user entered '${n}'"
             if [[ $n == "" ]]; then
                 n=$DEFAULT_RM_TMP
             fi
@@ -446,7 +456,7 @@ function xapi_install ()
                 rm -R xapi
                 break
             elif [[ $n == "n" ]]; then
-                echo "[LL] ok, not removing it - could cause weirdness though so be warned"
+                output "ok, not removing it - could cause weirdness though so be warned"
                 DO_XAPI_CHECKOUT=false
                 sleep 5
                 break
@@ -457,8 +467,10 @@ function xapi_install ()
     # do the checkout in a loop in case the users enters user/pass incorrectly
     if [[ $DO_XAPI_CHECKOUT -eq true ]]; then
         while true; do
+            output_log "attempting git clone for xapi"
             git clone -q https://github.com/LearningLocker/xapi-service.git xapi
             if [[ -d xapi ]]; then
+                output_log "git clone appears to have failed"
                 break
             fi
         done
@@ -469,15 +481,15 @@ function xapi_install ()
     # sort out .env
     if [[ ! -f .env ]]; then
         cp .env.example .env
-        echo "[LL] Copied example env to .env - This will need editing by hand"
+        output "Copied example env to .env - This will need editing by hand"
     fi
 
     # npm
-    echo -n "[LL] running npm install...."
+    output "running npm install...." true
     npm install >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
-    echo -n "[LL] running npm run build...."
+    output "running npm run build...." true
     npm run build >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
@@ -489,18 +501,21 @@ function xapi_install ()
 function nvm_install ()
 {
     if [[ -d ~/.nvm ]]; then
-        echo "[LL] nvm is already installed. Do you want to check for an update ? [y|n] (Press enter for a default of 'y')"
+        output "nvm is already installed. Do you want to check for an update ? [y|n] (Press enter for a default of 'y')"
         while true; do
             read -r -s -n 1 c
+            output_log "user entered '${c}'"
             if [[ $c == "" ]] || [[ $c == "y" ]]; then
+                output_log "will check NVM"
                 break
             elif [[ $c == "n" ]]; then
+                output_log "not checking NVM"
                 return
             fi
         done
     fi
 
-    echo -n "[LL] running nvm install/update process...."
+    output "running nvm install/update process...." true
     wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 }
@@ -513,16 +528,16 @@ function nvm_install ()
 function reprocess_pm2 ()
 {
     if [[ ! $1 ]]; then
-        echo "[LL] no file name passed to reprocess_pm2"
+        output "no file name passed to reprocess_pm2"
         return
     elif [[ ! -f $1 ]]; then
-        echo "[LL] file '${1}' passed to reprocess_pm2() appears to not exist."
+        output "file '${1}' passed to reprocess_pm2() appears to not exist."
         sleep 10
         return
     fi
 
     if [[ ! $2 ]]; then
-        echo "[LL] no install path passed to reprocess_pm2 - exiting"
+        output "no install path passed to reprocess_pm2 - exiting"
         exit 0
     fi
 
@@ -534,6 +549,10 @@ function reprocess_pm2 ()
     if [[ $4 ]]; then
         PID_DIR=$4
     fi
+
+    output_log "pm2 - setting pid dir to $PID_DIR"
+    output_log "pm2 - setting install path to $2"
+    output_log "pm2 - setting log dir to $LOG_DIR"
 
     sed -i "s?{INSTALL_DIR}?${2}?g" $1
     sed -i "s?{LOG_DIR}?${LOG_DIR}?g" $1
@@ -549,25 +568,30 @@ function reprocess_pm2 ()
 function setup_nginx_config ()
 {
     if [[ ! -f $1 ]]; then
-        echo "[LL] Warning :: nginx config in $1 can't be found - will need to be edited manually. Press any key to continue"
+        output "Warning :: nginx config in $1 can't be found - will need to be edited manually. Press any key to continue"
         read -r -s -n 1 n
         return 0
     fi
 
     if [[ ! -f $2 ]]; then
-        echo "[LL] Warning :: .env in $2 can't be found, can't set up nginx config correctly - will need to be edited manually. Press any key to continue"
+        output "Warning :: .env in $2 can't be found, can't set up nginx config correctly - will need to be edited manually. Press any key to continue"
         read -r -s -n 1 n
         return 0
     fi
 
     if [[ ! -f $3 ]]; then
-        echo "[LL] Warning :: xapi .env in $3 can't be found, can't set up nginx config correctly - will need to be edited manually. Press any key to continue"
+        output "Warning :: xapi .env in $3 can't be found, can't set up nginx config correctly - will need to be edited manually. Press any key to continue"
         read -r -s -n 1 n
         return 0
     fi
 
     UI_PORT=`fgrep UI_PORT $2 | sed 's/UI_PORT=//' | sed 's/\r//' `
     XAPI_PORT=`fgrep EXPRESS_PORT $3| sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
+
+    output_log "nginx - setting ui port to $UI_PORT"
+    output_log "nginx - setting xapi port to $XAPI_PORT"
+    output_log "nginx - setting site root to $4"
+
     sed -i "s/UI_PORT/${UI_PORT}/" $1
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" $1
     sed -i "s?/SITE_ROOT?${4}?" $1
@@ -590,7 +614,7 @@ function debian_install ()
     fi
 
     if [[ ! `command -v python` ]]; then
-        echo "[LL] Something seems to have gone wrong in installing basic software - exiting"
+        output "Something seems to have gone wrong in installing basic software - exiting"
         exit 0
     fi
 
@@ -598,7 +622,7 @@ function debian_install ()
         curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG
         apt-get -y -qq install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
-        echo "[LL] Node.js already installed"
+        output "Node.js already installed"
     fi
 
     if [[ ! `command -v yarn` ]]; then
@@ -607,15 +631,15 @@ function debian_install ()
         apt-get -qq update >> $OUTPUT_LOG 2>>$ERROR_LOG
         apt-get -y -qq install yarn >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
-        echo "[LL] yarn already installed"
+        output "yarn already installed"
     fi
 
     if [[ ! `command -v python` ]]; then
         if [[ `command -v python3` ]]; then
-            echo ["LL] Symlinking python3 to python for Yarn"
+            output "Symlinking python3 to python for Yarn"
             ln -s `command -v python3` /usr/bin/python
         else
-            echo "[LL] FATAL Error - can't find python. Path: ${PATH} EUID:${EUID}"
+            output "FATAL Error - can't find python. Path: ${PATH} EUID:${EUID}"
             exit 0
         fi
     fi
@@ -625,32 +649,33 @@ function debian_install ()
 function debian_nginx ()
 {
     if [[ ! -d $1 ]]; then
-        echo "[LL] No temp directory passed to debian_nginx() '${1}', should be impossible - exiting"
+        output "No temp directory passed to debian_nginx() '${1}', should be impossible - exiting"
         exit 0
     fi
 
     while true; do
         echo
-        echo "[LL] The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
+        output "The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
         read -r -s -n 1 n
+        output_log "user entered '${n}'"
         if [[ $n == "" ]]; then
             n="y"
         fi
         if [[ $n == "y" ]]; then
             break
         elif [[ $n == "n" ]]; then
-            echo "[LL] Can't continue - you'll need to do this step by hand"
+            output "Can't continue - you'll need to do this step by hand"
             sleep 5
             return
         fi
     done
 
-    echo -n "[LL] installing nginx...."
+    output "installing nginx...." true
     apt-get -y -qq install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
-        echo "[LL] default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
+        output "default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
         read n
         return
     fi
@@ -671,15 +696,25 @@ function debian_nginx ()
 
 function debian_mongo ()
 {
-    echo -n "[LL] installing mongodb...."
-    apt-get -y -qq install mongodb >> $OUTPUT_LOG 2>>$ERROR_LOG &
-    print_spinner true
+    if [[ $OS_VERSION == "Ubuntu" ]]; then
+        if [[ $OS_VNO == "16.04" ]]; then
+            output "Setting up mongo repo (Stock Ubuntu version is too old)"
+            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
+            echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+            apt-get UPDATE >> $OUTPUT_LOG 2>>$ERROR_LOG
+            apt-get install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
+        fi
+    else
+        output "installing mongodb...." true
+        apt-get -y -qq install mongodb >> $OUTPUT_LOG 2>>$ERROR_LOG &
+        print_spinner true
+    fi
 }
 
 
 function debian_redis ()
 {
-    echo -n "[LL] installing redis...."
+    output "[LL] installing redis...." true
     apt-get -y -qq install redis-tools redis-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 }
@@ -694,47 +729,47 @@ function redhat_epel ()
     if [[ $REDHAT_EPEL_INSTALLED == true ]]; then
         return
     fi
-    yum install epel-release
+    yum install epel-release >> $OUTPUT_LOG 2>>$ERROR_LOG
     REDHAT_EPEL_INSTALLED=true
 }
 
 
 function redhat_redis ()
 {
-    echo "[LL] installing redis"
+    output "installing redis"
     redhat_epel
-    yum install redis
-    service redis start
+    yum install redis >> $OUTPUT_LOG 2>>$ERROR_LOG
+    service redis start >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
 
 function redhat_mongo ()
 {
-    echo "[LL] installing mongodb"
+    output "installing mongodb"
     redhat_epel
     mkdir -p /data/db
-    yum install mongodb-server
-    semanage port -a -t mongod_port_t -p tcp 27017
-    service mongod start
+    yum install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG
+    semanage port -a -t mongod_port_t -p tcp 27017 >> $OUTPUT_LOG 2>>$ERROR_LOG
+    service mongod start >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
 
 function redhat_install ()
 {
-    yum install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core
+    yum install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG
 
     if [[ ! `command -v nodejs` ]]; then
         curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash -
-        yum -y install nodejs
+        yum -y install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
-        echo "[LL] Node.js already installed"
+        output "Node.js already installed"
     fi
 
     if [[ ! `command -v yarn` ]]; then
-        wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo
-        yum install yarn
+        wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo >> $OUTPUT_LOG 2>>$ERROR_LOG
+        yum install yarn >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
-        echo "[LL] yarn already installed"
+        output "yarn already installed"
     fi
 }
 
@@ -944,30 +979,30 @@ if [ -d "${BUILDDIR}learninglocker_node" ]; then
 fi
 
 if [ -d $TMPDIR ]; then
-    echo "[LL] tmp directory from prior install (${TMPDIR}) still exists - please clear by hand"
+    output "tmp directory from prior install (${TMPDIR}) still exists - please clear by hand"
     exit 0
 fi
 
 # check if root user
 if [[ `whoami` != "root" ]]; then
-    echo "[LL] Sorry, you need to be root to run this script (currently normal user)"
+    output "Sorry, you need to be root to run this script (currently normal user)"
     exit 0
 fi
 if [[ $EUID > 0 ]]; then
     # THIS EUID check checks if we're sudo - I don't want the script to run a sudo for the time being
-    echo "[LL] Sorry, you need to be root to run this script (currently sudo)"
+    output "Sorry, you need to be root to run this script (currently sudo)"
     exit 0
 fi
 
 if [[ ! `command -v openssl` ]]; then
-    echo "[LL] Sorry but you need openssl installed to install"
+    output "Sorry but you need openssl installed to install"
     exit 0
 fi
 
 # check system memory (in MB)
 SYSTEM_MEMORY=$(free -m | awk '/^Mem:/{print $2}')
 if [[ $SYSTEM_MEMORY -lt $MIN_MEMORY ]]; then
-    echo "[LL] You need a minimum of ${MIN_MEMORY}Mb of system memory to install Learning Locker - can't continue"
+    output "You need a minimum of ${MIN_MEMORY}Mb of system memory to install Learning Locker - can't continue"
     exit 0
 fi
 
@@ -986,17 +1021,19 @@ fi
 #################################################################################
 if [[ $GIT_ASK == true ]]; then
     while true; do
-        echo "[LL] What branch do you want to install ? Press 'enter' for the default of ${GIT_BRANCH}"
+        output "What branch do you want to install ? Press 'enter' for the default of ${GIT_BRANCH}"
         read -r n
         if [[ $n == "" ]]; then
+            output_log "user didn't select a branch"
             break
         else
             while true; do
-                echo "[LL] are you sure the branch '${n}' is correct ? [y|n] (press enter for the default of 'y')"
+                output "are you sure the branch '${n}' is correct ? [y|n] (press enter for the default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
                 fi
+                output_log "user entered '${c}'"
                 if [[ $c == "y" ]]; then
                     GIT_BRANCH=$n
                     break 2
@@ -1016,9 +1053,11 @@ while true; do
         n=$DEFAULT_INSTALL_TYPE
     fi
     if [[ $n == "l" ]]; then
+        output_log "NOTE :: Local install selected"
         LOCAL_INSTALL=true
         break
     elif [[ $n == "p" ]]; then
+        output_log "NOTE :: Package install selected"
         PACKAGE_INSTALL=true
         break
     fi
@@ -1031,32 +1070,34 @@ done
 if [[ $LOCAL_INSTALL == true ]]; then
 
     # determine local installation path
-    echo "[LL] We require a path to install to and a path to symlink to. The reason for this is that the script can be re-run in order to update"
-    echo "     cleanly. The path we'll ask you for is a base path for the releases to be installed to so if you select the default of:"
-    echo "         $DEFAULT_LOCAL_RELEASE_PATH"
-    echo "     then we will create a sub-directory under here for every release and symlink the latest install to the final install path (which"
-    echo "     the nginx config points at. This is so that roll-backs can be done easier and we can perform a complete install before finally"
-    echo "     switching the nginx config over which'll minimise downtime on upgrades"
+    output " We require a path to install to and a path to symlink to. The reason for this is that the script can be re-run in order to update"
+    output "     cleanly. The path we'll ask you for is a base path for the releases to be installed to so if you select the default of:" false true
+    output "         $DEFAULT_LOCAL_RELEASE_PATH" false true
+    output "     then we will create a sub-directory under here for every release and symlink the latest install to the final install path (which" false true
+    output "     the nginx config points at. This is so that roll-backs can be done easier and we can perform a complete install before finally" false true
+    output "     switching the nginx config over which'll minimise downtime on upgrades" false true
     while true; do
-        echo "[LL] What base directory do you want to install to ? (Press 'enter' for the default of $DEFAULT_LOCAL_RELEASE_PATH)"
+        output "What base directory do you want to install to ? (Press 'enter' for the default of $DEFAULT_LOCAL_RELEASE_PATH)"
         read -r p
         if [[ $p == "" ]]; then
             p=$DEFAULT_LOCAL_RELEASE_PATH
         fi
+        output_log "attempting to use base path of: $DEFAULT_LOCAL_RELEASE_PATH"
         if [[ ! -d $p ]]; then
             while true; do
-                echo "[LL] Directory '${p}' doesn't exist - should we create it ? [y|n] (Press enter for default of 'y')"
+                output "Directory '${p}' doesn't exist - should we create it ? [y|n] (Press enter for default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]] || [[ $c == "y" ]]; then
+                    output_log "user opted to proceed"
                     mkdir -p $p
                     if [[ ! -d $p ]]; then
-                        echo "[LL] ERROR : Tried to create directory $p and couldn't, exiting"
+                        output "ERROR : Tried to create directory $p and couldn't, exiting"
                         exit 0
                     fi
                     RELEASE_PATH=$p
                     break 2
                 elif [[ $c == n ]]; then
-                    echo "[LL] ERROR : Can't continue without creating releases directory, exiting"
+                    output "ERROR : Can't continue without creating releases directory, exiting"
                     exit 0
                 fi
             done
@@ -1068,31 +1109,35 @@ if [[ $LOCAL_INSTALL == true ]]; then
 
     # check where to symlink to
     while true; do
-        echo "[LL] What path should the release be symlinked to ? (Press enter for the default of $DEFAULT_SYMLINK_PATH)"
+        output "What path should the release be symlinked to ? (Press enter for the default of $DEFAULT_SYMLINK_PATH)"
         read -r p
         if [[ $p == "" ]]; then
             p=$DEFAULT_SYMLINK_PATH
         fi
         SYMLINK_PATH=$p
+        output_log "attempting to use path of: $SYMLINK_PATH"
         if [[ -f $SYMLINK_PATH ]] && [[ ! -L $SYMLINK_PATH ]]; then
-            echo "[LL] This path appears to already exist and be a regular file rather than a symlink - Can't continue"
+            output "This path appears to already exist and be a regular file rather than a symlink - Can't continue"
             exit 0
         elif [[ -L $SYMLINK_PATH ]]; then
             # symlink exists, go into update mode
-            echo "[LL] It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n] (Press enter for the default of 'y')"
+            output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n] (Press enter for the default of 'y')"
             while true; do
                 read -r -s -n 1 c
                 if [[ $c == "y" ]] || [[ $c == "" ]]; then
+                    output_log "user pressed '${c}'"
+                    output_log "NOTE :: RUNNING IN UPDATE MODE FROM NOW ON"
                     UPDATE_MODE=true
                     break 2
                 elif [[ $c == n ]]; then
                     while true; do
-                        echo "[LL] Ok, do you want to continue to install as anyway ? If you select yes then we'll unlink/delete things as needed [y|n] (Press enter for the default of 'y')"
+                        output "Ok, do you want to continue to install anyway ? If you select yes then we'll unlink/delete things as needed [y|n] (Press enter for the default of 'y')"
                         read -r -s -n 1 b
                         if [[ $b == "y" ]] || [[ $b == "" ]]; then
+                            output "Ok, continuing on - you won't be prompted for any overrides"
                             break 3
                         elif [[ $b == "n" ]]; then
-                            echo "[LL] Ok, I can't continue - you'll need to complete the install manually"
+                            output "Ok, I can't continue - you'll need to complete the install manually"
                             exit 0
                         fi
                     done
@@ -1107,7 +1152,7 @@ if [[ $LOCAL_INSTALL == true ]]; then
 
     # determine user to install under
     while true; do
-        echo "[LL] I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
+        output "I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
         read -r u
         if [[ $u == "" ]]; then
             u=$DEFAULT_USER
@@ -1116,38 +1161,39 @@ if [[ $LOCAL_INSTALL == true ]]; then
         if [[ $USERDATA == *"$u"* ]]; then
             # user exists
             while true; do
-                echo "[LL] User '$u' already exists - are you sure you want to continue? [y|n] (enter for default of 'y')"
+                output "User '$u' already exists - are you sure you want to continue? [y|n] (enter for default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
                 fi
                 if [[ $c == "y" ]]; then
+                    output_log "continuing using this user"
                     LOCAL_USER=$u
                     break
                 elif [[ $c == "n" ]]; then
-                    echo "[LL] Selected to not continue, exiting"
+                    output "Selected to not continue, exiting"
                     exit 0
                 fi
             done
         else
             while true; do
-                echo "[LL] User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
+                output "User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
                 fi
                 if [[ $c == "y" ]]; then
-                    echo -n "[LL] Creating user '${u}'...."
+                    output "Creating user '${u}'...." true
                     useradd -r -d $RELEASE_PATH $u
                     if [[ ! -d $RELEASE_PATH ]]; then
                         mkdir -p $RELEASE_PATH
                     fi
                     chown ${u}:${u} $RELEASE_PATH
-                    echo "done!"
+                    output "done!" false true
                     LOCAL_USER=$u
                     break
                 elif [[ $c == "n" ]]; then
-                    echo "[LL] Can't create user - can't continue"
+                    output "Can't create user - can't continue"
                     exit 0
                 fi
             done
@@ -1158,20 +1204,22 @@ if [[ $LOCAL_INSTALL == true ]]; then
 
     # check mongo
     if [[ `command -v mongod` ]]; then
-        echo "[LL] MongoDB is already installed, not installing"
+        output "MongoDB is already installed, not installing"
         MONGO_INSTALLED=true
     else
         while true; do
-            echo "[LL] MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+            output "MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
             read -r -s -n 1 c
             if [[ $c == "" ]]; then
                 c="y"
             fi
             if [[ $c == "y" ]]; then
+                output_log "opted to install mongo"
                 MONGO_INSTALL=true
                 MONGO_INSTALLED=true
                 break
             elif [[ $c == "n" ]]; then
+                output_log "opted not to install mongo"
                 MONGO_INSTALL=false
                 break
             fi
@@ -1180,29 +1228,32 @@ if [[ $LOCAL_INSTALL == true ]]; then
 
     # check redis
     if [[ `command -v redis-server` ]]; then
-        echo "[LL] Redis is already installed, not installing"
+        output "Redis is already installed, not installing"
         CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
         version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
+        output_log "Redis Version: $CUR_REDIS_VERSION"
         REDISCHK=$?
         if [[ $REDISCHK == 2 ]]; then
-            echo "[LL] Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
+            output "Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
             sleep 5
         else
-            echo "[LL] Redis version (${CUR_REDIS_VERSION}) is above minimum of $MIN_REDIS_VERSION - continuing"
+            output "Redis version (${CUR_REDIS_VERSION}) is above minimum of $MIN_REDIS_VERSION - continuing"
             REDIS_INSTALLED=true
         fi
     else
         while true; do
-            echo "[LL] Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+            output "Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
             read -r -s -n 1 c
             if [[ $c == "" ]]; then
                 c="y"
             fi
             if [[ $c == "y" ]]; then
+                output_log "opted to install redis"
                 REDIS_INSTALL=true
                 REDIS_INSTALLED=true
                 break
             elif [[ $c == "n" ]]; then
+                output_log "opted not to install redis"
                 REDIS_INSTALL=false
                 break
             fi
@@ -1228,7 +1279,7 @@ determine_os_version
 if [[ $NODE_OVERRIDE != false ]]; then
     NODE_VERSION=$NODE_OVERRIDE
 fi
-echo "[LL] Installing node version: $NODE_VERSION"
+output "Installing node version: $NODE_VERSION"
 
 if [[ $OS_VERSION == "Debian" ]]; then
     debian_install
@@ -1242,33 +1293,33 @@ fi
 nvm_install
 
 # base install & build
-echo "[LL] Running install step"
+output "Running install step"
 cd $BUILDDIR
 base_install
 xapi_install
 
 # create tmp dir
-echo "[LL] creating $TMPDIR"
+output "creating $TMPDIR"
 mkdir -p $TMPDIR
 
 # package.json
-echo -n "[LL] copying modules...."
+output "copying modules...." true
 if [[ ! -f ${BUILDDIR}/learninglocker_node/package.json ]]; then
-    echo "can't copy file '${BUILDDIR}/learninglocker_node/package.json' as it doesn't exist- exiting"
+    output "can't copy file '${BUILDDIR}/learninglocker_node/package.json' as it doesn't exist- exiting" false true
     exit 0
 fi
 cp ${BUILDDIR}/learninglocker_node/package.json $TMPDIR/
 
 # pm2 loader
 if [[ ! -f ${BUILDDIR}/learninglocker_node/pm2/all.json ]]; then
-    echo "can't copy file '${BUILDDIR}/learninglocker_node/pm2/all.json' as it doesn't exist- exiting"
+    output "can't copy file '${BUILDDIR}/learninglocker_node/pm2/all.json' as it doesn't exist- exiting" false true
     exit 0
 fi
 cp ${BUILDDIR}/learninglocker_node/pm2/all.json.dist $TMPDIR/all.json
 
 # xapi config
 if [[ ! -f ${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist ]]; then
-    echo "can't copy file '${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist' as it doesn't exist- exiting"
+    output "can't copy file '${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist' as it doesn't exist- exiting" false true
     exit 0
 fi
 if [[ ! -d ${TMPDIR}/xapi ]]; then
@@ -1278,14 +1329,22 @@ cp ${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist $TMPDIR/xapi/xapi.jso
 
 # node_modules
 if [[ ! -d ${BUILDDIR}/learninglocker_node/node_modules ]]; then
-    echo "can't copy directory '${BUILDDIR}/learninglocker_node/node_modules' as it doesn't exist- exiting"
+    output "can't copy directory '${BUILDDIR}/learninglocker_node/node_modules' as it doesn't exist- exiting" false true
     exit 0
 fi
 cp -R ${BUILDDIR}/learninglocker_node/node_modules $TMPDIR/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
 print_spinner true
 
+output_log "copying nginx.conf.example to $TMPDIR"
 cp nginx.conf.example $TMPDIR/
+
+output_log "copying ${BUILDDIR}/learninglocker_node/.git to $TMPDIR"
+cp -R ${BUILDDIR}/learninglocker_node/.git $TMPDIR/
+
+output_log "copying ${BUILDDIR}/learninglocker_node/.env to $TMPDIR"
 cp ${BUILDDIR}/learninglocker_node/.env $TMPDIR/
+
+output_log "copying ${BUILDDIR}/learninglocker_node/xapi/.env to $TMPDIR/xapi/"
 cp ${BUILDDIR}/learninglocker_node/xapi/.env $TMPDIR/xapi/
 checkCopyDir
 
@@ -1323,13 +1382,14 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     # AMAZON
         elif [[ $OS_SUBVER == "Amazon" ]]; then
             if [[ $REDIS_INSTALL == true ]]; then
-                echo "AWS Linux doesn't ship with Redis in a repository. You'll need to install this yourself. Press any key to continue"
+                output "AWS Linux doesn't ship with Redis in a repository. You'll need to install this yourself. Press any key to continue"
                 REDIS_INSTALL=false
                 REDIS_INSTALLED=false
                 read -n 1 n
                 if [[ $MONGO_INSTALL == true ]]; then
-                    echo "[LL] As redis isn't going to be installed locally, do you still want to install MongoDB ? [y|n] (press enter for the default of 'y')"
+                    output "As redis isn't going to be installed locally, do you still want to install MongoDB ? [y|n] (press enter for the default of 'y')"
                     read -s -r -n 1 n
+                    output_log "user entered '${n}'"
                     if [[ $n == "n" ]]; then
                         MONGO_INSTALL=false
                     fi
@@ -1351,22 +1411,23 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     fi
 
 
-    echo "[LL] Local install to $LOCAL_PATH"
+    output "Local install to $LOCAL_PATH"
 
 
     # check redis installed to the right version
     # if not, then we'll act like we haven't installed it
     if [[ $REDIS_INSTALL == true ]]; then
         if [[ ! `command -v redis-server` ]]; then
-            echo "[LL] Warning :: Can't find the redis-server executable, this means it's not been installed when it looks like it should've been. Press any key to continue"
+            output "Warning :: Can't find the redis-server executable, this means it's not been installed when it looks like it should've been. Press any key to continue"
             REDIS_INSTALLED=false
             read -n 1 n
         else
             CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
             version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
+            output_log "redis version: $CUR_REDIS_VERSION"
             REDISCHK=$?
             if [[ $REDISCHK == 2 ]]; then
-                echo "[LL] Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself - Press any key to continue"
+                output "Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself - Press any key to continue"
                 REDIS_INSTALLED=false
                 read -n 1 n
             fi
@@ -1375,52 +1436,52 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     # extra warning for redis not being installed locally
     if [[ $REDIS_INSTALLED == false ]]; then
-        echo "[LL] Learning Locker requires Redis to be installed. As this isn't available on this server you'll need to"
-        echo "     change the variables in ${LOCAL_PATH}/.env to point to a redis server. The variables you'll need to"
-        echo "     change are 'REDIS_HOST', 'REDIS_PORT', 'REDIS_DB' and possibly 'REDIS_PREFIX'"
+        output " Learning Locker requires Redis to be installed. As this isn't available on this server you'll need to"
+        output "     change the variables in ${LOCAL_PATH}/.env to point to a redis server. The variables you'll need to" false true
+        output "     change are 'REDIS_HOST', 'REDIS_PORT', 'REDIS_DB' and possibly 'REDIS_PREFIX'" false true
         echo
         if [[ $OS_SUBVER == "Amazon" ]]; then
-            echo "[LL] As you're running on AWS then you can use 'ElastiCache' to get a Redis instance set up quickly. We can't install"
-            echo "     Redis on AWS EC2 instances at the moment as there are no official repositories for a copy of Redis. If you want"
-            echo "     to install Redis on this server then we'd recommend you grab the latest version from:"
-            echo "         https://redis.io/download"
-            echo "     and follow the install steps on this page"
+            output "As you're running on AWS then you can use 'ElastiCache' to get a Redis instance set up quickly. We can't install"
+            output "     Redis on AWS EC2 instances at the moment as there are no official repositories for a copy of Redis. If you want" false true
+            output "     to install Redis on this server then we'd recommend you grab the latest version from:" false true
+            output "         https://redis.io/download" false true
+            output "     and follow the install steps on this page" false true
             echo
         fi
-        echo "Press any key to continue"
+        output "Press any key to continue" false true
         read -n 1 n
         echo
     elif [[ $REDIS_INSTALL == false ]]; then
         # only hit this bit if redis was installed already
-        echo "[LL] Redis appears to have already been installed on this server. By default, Redis doesn't have a huge amount"
-        echo "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of Redis"
-        echo "     with the default lack of credentials. If you want to secure Redis more or want to connect to a different"
-        echo "     Redis server then you'll need to edit the redis variables:"
-        echo "         'REDIS_HOST', 'REDIS_PORT', 'REDIS_DB' and maybe'REDIS_PREFIX'"
-        echo "     in ${LOCAL_PATH}/.env"
+        output "Redis appears to have already been installed on this server. By default, Redis doesn't have a huge amount"
+        output "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of Redis" false true
+        output "     with the default lack of credentials. If you want to secure Redis more or want to connect to a different" false true
+        output "     Redis server then you'll need to edit the redis variables:" false true
+        output "         'REDIS_HOST', 'REDIS_PORT', 'REDIS_DB' and maybe'REDIS_PREFIX'" false true
+        output "     in ${LOCAL_PATH}/.env" false true
         echo
-        echo "Press any key to continue"
+        output "Press any key to continue" false true
         read -n 1 n
         echo
     fi
 
     # extra warning for mongodb
     if [[ $MONGO_INSTALLED == false ]]; then
-        echo "[LL] Learning Locker requires MongoDB to be installed. As this isn't installed locally on this server you'll"
-        echo "     need to change the variable in ${LOCAL_PATH}/.env to point to a MongoDB Server. The variable you'll"
-        echo "     have to change is 'MONGODB_PATH'"
+        output "Learning Locker requires MongoDB to be installed. As this isn't installed locally on this server you'll"
+        output "     need to change the variable in ${LOCAL_PATH}/.env to point to a MongoDB Server. The variable you'll" false true
+        output "     have to change is 'MONGODB_PATH'" false true
         echo
-        echo "Press any key to continue"
+        output "Press any key to continue" false true
         read -n 1 n
         echo
     elif [[ $MONGO_INSTALL == false ]]; then
         # only hit this bit if mongo was installed already
-        echo "[LL] MongoDB appears to have already been installed on this server. By default, MongoDB doesn't have a huge amount"
-        echo "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of MongoDB"
-        echo "     with the default lack of credentials. If you want to secure MongoDB more or want to connect to a different"
-        echo "     MongoDB server then you'll need to edit the 'MONGODB_PATH' variable in ${LOCAL_PATH}/.env"
+        output "MongoDB appears to have already been installed on this server. By default, MongoDB doesn't have a huge amount"
+        output "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of MongoDB" false true
+        output "     with the default lack of credentials. If you want to secure MongoDB more or want to connect to a different" false true
+        output "     MongoDB server then you'll need to edit the 'MONGODB_PATH' variable in ${LOCAL_PATH}/.env" false true
         echo
-        echo "Press any key to continue"
+        output "Press any key to continue" false true
         read -n 1 n
         echo
     fi
@@ -1431,22 +1492,30 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
 
 
+    output_log "reprocessing $TMPDIR/all.json"
     reprocess_pm2 $TMPDIR/all.json $SYMLINK_PATH $LOG_PATH $PID_PATH
+    output_log "reprocessing $TMPDIR/xapi/xapi.json"
     reprocess_pm2 $TMPDIR/xapi/xapi.json ${SYMLINK_PATH}/xapi $LOG_PATH $PID_PATH
 
 
     mkdir -p $LOCAL_PATH
     cp -R $TMPDIR/* $LOCAL_PATH/
-    if [[ -f $SYMLINK_PATH ]]; then
-        unlink $SYMLINK_PATH
-    fi
-    ln -s $LOCAL_PATH $SYMLINK_PATH
     # above line doesn't copy the .env so have to do this manually
     cp $TMPDIR/.env $LOCAL_PATH/.env
+    cp -R $TMPDIR/.git $LOCAL_PATH/
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
+
+    # set up symlink
+    if [[ -f $SYMLINK_PATH ]]; then
+        output_log "un-linking symlink of $SYMLINK_PATH"
+        unlink $SYMLINK_PATH
+    fi
+    output_log "creating symlink : $LOCAL_PATH $SYMLINK_PATH"
+    ln -s $LOCAL_PATH $SYMLINK_PATH
 
 
     # set up init script and run any reprocessing we need
+    output_log "setting up init script. Path: $LOCAL_PATH user: $LOCAL_USER"
     setup_init_script $LOCAL_PATH $LOCAL_USER
 
     service pm2-${LOCAL_USER} start
