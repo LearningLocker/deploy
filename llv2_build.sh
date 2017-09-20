@@ -879,11 +879,11 @@ function amazon_mongo ()
     output "setting up mongo repo in $MONGO_REPO_FILE"
 
     echo "[mongodb-org-3.4]" > $MONGO_REPO_FILE
-    echo "name=MongoDB Repository" > $MONGO_REPO_FILE
-    echo "baseurl=https://repo.mongodb.org/yum/amazon/2013.03/mongodb-org/3.4/x86_64/" > $MONGO_REPO_FILE
-    echo "gpgcheck=1" > $MONGO_REPO_FILE
-    echo "enabled=1" > $MONGO_REPO_FILE
-    echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc" > $MONGO_REPO_FILE
+    echo "name=MongoDB Repository" >> $MONGO_REPO_FILE
+    echo "baseurl=https://repo.mongodb.org/yum/amazon/2013.03/mongodb-org/3.4/x86_64/" >> $MONGO_REPO_FILE
+    echo "gpgcheck=1" >> $MONGO_REPO_FILE
+    echo "enabled=1" >> $MONGO_REPO_FILE
+    echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc" >> $MONGO_REPO_FILE
     yum -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
