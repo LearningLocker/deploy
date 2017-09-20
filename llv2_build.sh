@@ -717,9 +717,18 @@ function debian_mongo ()
 
 function debian_redis ()
 {
-    output "[LL] installing redis...." true
+    output "installing redis...." true
     apt-get -y -qq install redis-tools redis-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
+}
+
+
+function debian_clamav ()
+{
+    output "Installing ClamAV...." true
+    apt-get -y -qq install clamav >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
+    CLAM_INSTALLED=true
 }
 
 
@@ -748,12 +757,24 @@ function redhat_redis ()
 
 function redhat_mongo ()
 {
-    output "installing mongodb"
     redhat_epel
+
+    output "installing mongodb...." true
     mkdir -p /data/db
-    yum install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG
+    yum -y install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
+
     semanage port -a -t mongod_port_t -p tcp 27017 >> $OUTPUT_LOG 2>>$ERROR_LOG
     service mongod start >> $OUTPUT_LOG 2>>$ERROR_LOG
+}
+
+
+function redhat_clamav ()
+{
+    output "Installing ClamAV...." true
+    yum -y install clamav >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
+    CLAM_INSTALLED=true
 }
 
 
@@ -812,9 +833,9 @@ function redhat_nginx ()
     fi
 
     if [[ $OS_SUBVER == "Fedora" ]]; then
-        echo "[LL] Default fedora nginx config needs the server block in /etc/nginx/nginx.conf removing"
-        echo "     before learninglocker will work properly or it'll clash with the LL config"
-        echo "     Press any key to continue"
+        output "Default fedora nginx config needs the server block in /etc/nginx/nginx.conf removing"
+        output "before learninglocker will work properly or it'll clash with the LL config" false false 5
+        output "Press any key to continue" false false 5
         read n
     fi
 
@@ -836,9 +857,9 @@ function redhat_nginx ()
 
 
     if [[ $OS_SUBVER == "CentOS" ]] || [[ $OS_SUBVER == "Fedora" ]]; then
-        echo "[LL] I need to punch a hole in selinux to continue. This is running the command:"
-        echo "         setsebool -P httpd_can_network_connect 1"
-        echo "     press 'y' to continue or 'n' to exit"
+        output "I need to punch a hole in selinux to continue. This is running the command:"
+        output "setsebool -P httpd_can_network_connect 1" false false 5
+        output "press 'y' to continue or 'n' to exit" false false 5
         while true; do
             read n
             if [[ $n == "n" ]]; then
@@ -884,7 +905,10 @@ function amazon_mongo ()
     echo "gpgcheck=1" >> $MONGO_REPO_FILE
     echo "enabled=1" >> $MONGO_REPO_FILE
     echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc" >> $MONGO_REPO_FILE
-    yum -y install mongodb-org
+
+    output "installing mongodb...." true
+    yum -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 }
 
 
@@ -969,6 +993,8 @@ MIN_MEMORY=970
 LOG_PATH=/var/log/learninglocker
 OUTPUT_LOG=${LOG_PATH}/install.log
 ERROR_LOG=$OUTPUT_LOG # placeholder - only want one file for now, may be changed later
+CLAM_INSTALL=false
+CLAM_PATH=false
 
 
 
@@ -1210,6 +1236,30 @@ if [[ $LOCAL_INSTALL == true ]]; then
     done
 
 
+    # check for clamAV
+    if [[ `command -v clamscan` ]]; then
+        output "ClamAV already installed"
+        CLAM_PATH=`command -v clamscan`
+        CLAM_INSTALLED=true
+    else
+        CLAM_INSTALLED=false
+        while true; do
+            output "Learning Locker ideally works best with ClamAV installed but it is not an absolute requirement. Do you want to install it? [y|n] (press 'enter' for the default of 'y')"
+            read -r -s -n 1 c
+            output_log "user entered '${c}'"
+            if [[ $c == "" ]]; then
+                c="y"
+            fi
+            if [[ $c == "y" ]]; then
+                CLAM_INSTALL=true
+            elif [[ $c == "n" ]]; then
+                CLAM_INSTALL=false
+                break
+            fi
+        done
+    fi
+
+
     # check mongo
     if [[ `command -v mongod` ]]; then
         output "MongoDB is already installed, not installing"
@@ -1229,6 +1279,7 @@ if [[ $LOCAL_INSTALL == true ]]; then
         while true; do
             output "MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
             read -r -s -n 1 c
+            output_log "user entered '${c}'"
             if [[ $c == "" ]]; then
                 c="y"
             fi
@@ -1387,9 +1438,15 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         if [[ $MONGO_INSTALL == true ]]; then
             debian_mongo
         fi
+        if [[ $CLAM_INSTALL == true ]]; then
+            redhat_clamav
+        fi
     elif [[ $OS_VERSION == "Redhat" ]]; then
         # BASE REDHAT stuff
         redhat_nginx $TMPDIR $SYMLINK_PATH
+        if [[ $CLAM_INSTALL == true ]]; then
+            redhat_clamav
+        fi
     # FEDORA
         if [[ $OS_SUBVER == "Fedora" ]]; then
             if [[ $REDIS_INSTALL == true ]]; then
@@ -1427,6 +1484,11 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 redhat_mongo
             fi
         fi
+    fi
+
+    # get the clamAV path if needed
+    if [[ $CLAM_INSTALL == true ]]; then
+        CLAM_PATH=`command -v clamscan`
     fi
 
 
@@ -1523,6 +1585,11 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     cp $TMPDIR/.env $LOCAL_PATH/.env
     cp -R $TMPDIR/.git $LOCAL_PATH/
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
+
+    # update the .env with the path to clamav
+    if [[ $CLAM_INSTALLED == true ]]; then
+        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/.env
+    fi
 
     # set up symlink
     if [[ -f $SYMLINK_PATH ]]; then
