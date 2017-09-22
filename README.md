@@ -14,7 +14,7 @@ yum update
 ```
 or
 ```
-apt-get update
+apt-get update && apt-get upgrade
 ```
 
 
