@@ -708,6 +708,8 @@ function debian_mongo ()
             echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
+            systemctl unmask mongodb
+            service mongodb start
         fi
     else
         output "installing mongodb...." true
