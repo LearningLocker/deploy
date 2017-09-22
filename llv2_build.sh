@@ -442,7 +442,7 @@ function base_install ()
 
 function xapi_install ()
 {
-    output "Will now try and clone the git repo for XAPI. Will prompt for user/pass and may take some time...."
+    output "Will now try and clone the git repo for XAPI. May take some time...."
     # not checking for presence of 'git' command as done in git_clone_base()
 
     DO_XAPI_CHECKOUT=true;
