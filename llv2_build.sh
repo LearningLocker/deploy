@@ -1618,6 +1618,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         if [[ $RUN_INSTALL_CMD == true ]]; then
             d=`pwd`
             cd $LOCAL_PATH
+            echo "[LL] Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
+            echo "     Attempt to manually start the Mongo service and then run this command:"
+            echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
+
             node cli/dist/server createSiteAdmin $INSTALL_EMAIL $INSTALL_ORG $INSTALL_PASSWD
             cd $d
         fi
