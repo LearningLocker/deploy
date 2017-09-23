@@ -1546,6 +1546,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ]; then
         RUN_INSTALL_CMD=false
         echo "[LL] do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
+        
         while true; do
             read -r -s -n 1 n
             if [[ $n == "" ]]; then
@@ -1615,6 +1616,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         if [[ $RUN_INSTALL_CMD == true ]]; then
             d=`pwd`
             cd $LOCAL_PATH
+            echo "[LL] Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
+            echo "     Attempt to manually start the Mongo service and then run this command:"
+            echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
+
             node cli/dist/server createSiteAdmin $INSTALL_EMAIL $INSTALL_ORG $INSTALL_PASSWD
             cd $d
         fi
