@@ -1546,7 +1546,6 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ]; then
         RUN_INSTALL_CMD=false
         echo "[LL] do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
-        
         while true; do
             read -r -s -n 1 n
             if [[ $n == "" ]]; then
