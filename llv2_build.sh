@@ -709,7 +709,10 @@ function debian_mongo ()
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
             systemctl unmask mongodb
-            service mongodb start
+            # Attempt to start via both services - one will likely fail but 
+            output "Attempting to start mongod service...."
+            output" If this fails you will need to check how the Mongo service is setup for your system and manually start it"
+            service mongod start
         fi
     else
         output "installing mongodb...." true
