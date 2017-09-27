@@ -1252,6 +1252,7 @@ if [[ $LOCAL_INSTALL == true ]]; then
             fi
             if [[ $c == "y" ]]; then
                 CLAM_INSTALL=true
+                break
             elif [[ $c == "n" ]]; then
                 CLAM_INSTALL=false
                 break
