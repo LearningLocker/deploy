@@ -705,7 +705,12 @@ function debian_mongo ()
             apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
             echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
-            apt-get install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
+            systemctl unmask mongod
+            apt-get -qq -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
+            # Attempt to start via both services - one will likely fail but
+            output "Attempting to start mongod service...."
+            output" If this fails you will need to check how the Mongo service is setup for your system and manually start it"
+            service mongod start
         fi
     else
         output "installing mongodb...." true
