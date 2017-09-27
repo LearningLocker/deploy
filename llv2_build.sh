@@ -711,7 +711,7 @@ function debian_mongo ()
             apt-get -qq -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
             # Attempt to start via both services - one will likely fail but
             output "Attempting to start mongod service...."
-            output" If this fails you will need to check how the Mongo service is setup for your system and manually start it"
+            output "If this fails you will need to check how the Mongo service is setup for your system and manually start it"
             service mongod start
         fi
     else
