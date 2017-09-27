@@ -442,7 +442,7 @@ function base_install ()
 
 function xapi_install ()
 {
-    output "Will now try and clone the git repo for XAPI. Will prompt for user/pass and may take some time...."
+    output "Will now try and clone the git repo for XAPI. May take some time...."
     # not checking for presence of 'git' command as done in git_clone_base()
 
     DO_XAPI_CHECKOUT=true;
@@ -709,7 +709,10 @@ function debian_mongo ()
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
             systemctl unmask mongodb
-            service mongodb start
+            # Attempt to start via both services - one will likely fail but 
+            output "Attempting to start mongod service...."
+            output" If this fails you will need to check how the Mongo service is setup for your system and manually start it"
+            service mongod start
         fi
     else
         output "installing mongodb...." true
@@ -1618,6 +1621,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         if [[ $RUN_INSTALL_CMD == true ]]; then
             d=`pwd`
             cd $LOCAL_PATH
+            echo "[LL] Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
+            echo "     Attempt to manually start the Mongo service and then run this command:"
+            echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
+
             node cli/dist/server createSiteAdmin $INSTALL_EMAIL $INSTALL_ORG $INSTALL_PASSWD
             cd $d
         fi
