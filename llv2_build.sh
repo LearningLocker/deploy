@@ -1133,10 +1133,13 @@ if [[ $LOCAL_INSTALL == true ]]; then
             exit 0
         elif [[ -L $SYMLINK_PATH ]]; then
             # symlink exists, go into update mode
-            output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n] (Press enter for the default of 'y')"
+            output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
             while true; do
                 read -r -s -n 1 c
-                if [[ $c == "y" ]] || [[ $c == "" ]]; then
+                if [[ $c == "e" ]];
+                    output "Ok, exiting"
+                    exit 0
+                elif [[ $c == "y" ]] || [[ $c == "" ]]; then
                     output_log "user pressed '${c}'"
                     output_log "NOTE :: RUNNING IN UPDATE MODE FROM NOW ON"
                     UPDATE_MODE=true
