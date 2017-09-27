@@ -353,7 +353,7 @@ function base_install ()
     if [[ -d learninglocker_node ]]; then
         while true; do
             output "Temp directory already exists for checkout - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
-            if [[ $BYPASSALL == true ]]; then
+            if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
                 rm -R learninglocker_node
                 break
@@ -463,7 +463,7 @@ function xapi_install ()
         DEFAULT_RM_TMP="y"
         while true; do
             output "Tmp directory already exists for checkout of xapi - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
-            if [[ $BYPASSALL == true ]]; then
+            if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
                 rm -R xapi
                 break
@@ -526,7 +526,7 @@ function nvm_install ()
     if [[ -d ~/.nvm ]]; then
         output "nvm is already installed. Do you want to check for an update ? [y|n] (Press enter for a default of 'y')"
         while true; do
-            if [[ $BYPASSALL == true ]]; then
+            if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
                 break
             fi
@@ -1171,8 +1171,8 @@ while true; do
             SYMLINK_PATH=$DEFAULT_SYMLINK_PATH
             # user
             LOCAL_USER=$DEFAULT_USER
-            USERDATA=`getent passwd LOCAL_USER`
-            if [[ $USERDATA != *"LOCAL_USER"* ]]; then
+            USERDATA=`getent passwd $LOCAL_USER`
+            if [[ $USERDATA != *"$LOCAL_USER"* ]]; then
                 useradd -r -d $RELEASE_PATH $u
                 if [[ ! -d $RELEASE_PATH ]]; then
                     mkdir -p $RELEASE_PATH
@@ -1184,6 +1184,7 @@ while true; do
                 output "This path appears to already exist and be a regular file rather than a symlink - Can't continue"
                 exit 0
             elif [[ -L $SYMLINK_PATH ]]; then
+                output "In update mode"
                 UPDATE_MODE=true
             fi
             # mongo
@@ -1216,6 +1217,11 @@ while true; do
                 REDIS_INSTALL=true
                 REDIS_INSTALLED=true
             fi
+            output "automated setup"
+            output "release path: $RELEASE_PATH"
+            output "symlink path: $SYMLINK_PATH"
+            output "user: $LOCAL_USER"
+
             break
         fi
 
