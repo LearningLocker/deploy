@@ -161,6 +161,12 @@ function determine_os_version ()
 }
 
 
+function show_help ()
+{
+    echo "stub for help text"
+}
+
+
 function print_spinner ()
 {
     pid=$!
@@ -266,7 +272,9 @@ function setup_init_script ()
 
     if [[ ! `command -v pm2` ]]; then
         output "Didn't install pm2 or can't find it - the init script will need to be set up by hand. Press any key to continue"
-        read n
+        if [[ $BYPASSALL == false ]]; then
+            read n
+        fi
         return
     fi
 
@@ -345,6 +353,11 @@ function base_install ()
     if [[ -d learninglocker_node ]]; then
         while true; do
             output "Temp directory already exists for checkout - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
+            if [[ $BYPASSALL == true ]]; then
+                output "bypass defaulting to 'y'"
+                rm -R learninglocker_node
+                break
+            fi
             read -r -s -n 1 n
             if [[ $n == "" ]]; then
                 n=$DEFAULT_RM_TMP
@@ -450,6 +463,11 @@ function xapi_install ()
         DEFAULT_RM_TMP="y"
         while true; do
             output "Tmp directory already exists for checkout of xapi - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
+            if [[ $BYPASSALL == true ]]; then
+                output "bypass defaulting to 'y'"
+                rm -R xapi
+                break
+            fi
             read n
             output_log "user entered '${n}'"
             if [[ $n == "" ]]; then
@@ -508,6 +526,10 @@ function nvm_install ()
     if [[ -d ~/.nvm ]]; then
         output "nvm is already installed. Do you want to check for an update ? [y|n] (Press enter for a default of 'y')"
         while true; do
+            if [[ $BYPASSALL == true ]]; then
+                output "bypass defaulting to 'y'"
+                break
+            fi
             read -r -s -n 1 c
             output_log "user entered '${c}'"
             if [[ $c == "" ]] || [[ $c == "y" ]]; then
@@ -574,19 +596,25 @@ function setup_nginx_config ()
 {
     if [[ ! -f $1 ]]; then
         output "Warning :: nginx config in $1 can't be found - will need to be edited manually. Press any key to continue"
-        read -r -s -n 1 n
+        if [[ $BYPASSALL == false ]]; then
+            read -r -s -n 1 n
+        fi
         return 0
     fi
 
     if [[ ! -f $2 ]]; then
         output "Warning :: .env in $2 can't be found, can't set up nginx config correctly - will need to be edited manually. Press any key to continue"
-        read -r -s -n 1 n
+        if [[ $BYPASSALL == false ]]; then
+            read -r -s -n 1 n
+        fi
         return 0
     fi
 
     if [[ ! -f $3 ]]; then
         output "Warning :: xapi .env in $3 can't be found, can't set up nginx config correctly - will need to be edited manually. Press any key to continue"
-        read -r -s -n 1 n
+        if [[ $BYPASSALL == false ]]; then
+            read -r -s -n 1 n
+        fi
         return 0
     fi
 
@@ -681,7 +709,9 @@ function debian_nginx ()
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
         output "default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
-        read n
+        if [[ $BYPASSALL == false ]]; then
+            read n
+        fi
         return
     fi
 
@@ -797,6 +827,10 @@ function redhat_nginx ()
     while true; do
         echo
         output "The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
+        if [[ $BYPASSALL == true ]]; then
+            output "bypass defaulting to 'y'"
+            break
+        fi
         read n
         output_log "user pressed '${n}'"
         if [[ $n == "" ]]; then
@@ -822,13 +856,17 @@ function redhat_nginx ()
         echo "[LL] Default fedora nginx config needs the server block in /etc/nginx/nginx.conf removing"
         echo "     before learninglocker will work properly or it'll clash with the LL config"
         echo "     Press any key to continue"
-        read n
+        if [[ $BYPASSALL == false ]]; then
+            read n
+        fi
     fi
 
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
         output "default learninglocker nginx config doesn't exist - can't continue. Press any key to continue"
-        read n
+        if [[ $BYPASSALL == false ]]; then
+            read n
+        fi
         return
     fi
 
@@ -847,6 +885,11 @@ function redhat_nginx ()
         echo "         setsebool -P httpd_can_network_connect 1"
         echo "     press 'y' to continue or 'n' to exit"
         while true; do
+            if [[ $BYPASSALL == true ]]; then
+                output "bypass defaulting to 'y'"
+                setsebool -P httpd_can_network_connect 1
+                break
+            fi
             read n
             if [[ $n == "n" ]]; then
                 echo "not doing this, you'll have to run it by hand"
@@ -866,7 +909,9 @@ function redhat_nginx ()
         output "as you're on CentOS, this may be running with firewalld enabled - you'll either need to punch"
         output "a hole in the firewall rules or disable firewalld (not recommended) to allow inbound access to" false false 5
         output "learning locker. Press any key to continue" false false 5
-        read n
+        if [[ $BYPASSALL == false ]]; then
+            read n
+        fi
     fi
 }
 
@@ -931,6 +976,10 @@ FREESPACE=`df $_TD | awk '/[0-9]%/{print $(NF-2)}'`
 if [[ $FREESPACE -lt $MIN_DISK_SPACE ]]; then
     echo "[LL] your temp dir isn't large enough to continue, please enter a new path (pressing enter will exit)"
     while true; do
+        if [[ $BYPASSALL == false ]]; then
+            output "In bypass mode - can't continue"
+            exit 0
+        fi
         read n
         if [[ $n == "" ]]; then
             exit 0
@@ -976,6 +1025,8 @@ MIN_MEMORY=970
 LOG_PATH=/var/log/learninglocker
 OUTPUT_LOG=${LOG_PATH}/install.log
 ERROR_LOG=$OUTPUT_LOG # placeholder - only want one file for now, may be changed later
+JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
+BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
 
 
 
@@ -1032,6 +1083,30 @@ fi
 
 
 #################################################################################
+#                                 GET USER INPUT                                #
+#################################################################################
+OPTIND=1         # Reset in case getopts has been used previously in the shell.
+
+while getopts "h?pnraksy:" opt; do
+    case "$opt" in
+    h|\?)
+        show_help
+        exit 1
+        ;;
+    y)
+        JUSTDOIT=true
+        if [[ $OPTARG == "2" ]]; then
+            BYPASSALL=true
+        fi
+        ;;
+    esac
+done
+
+shift $((OPTIND-1))
+[ "$1" = "--" ] && shift
+
+
+#################################################################################
 #                                 ASK QUESTIONS                                 #
 #################################################################################
 if [[ $GIT_ASK == true ]]; then
@@ -1082,215 +1157,279 @@ done
 #######################################################################
 #                       LOCAL INSTALL QUESTIONS                       #
 #######################################################################
-if [[ $LOCAL_INSTALL == true ]]; then
+while true; do
+    # entering a while loop here so that if we're on a just do it type of install then we can skip out of the loop rather than
+    # having a bunch of if's everywhere
 
-    # determine local installation path
-    output " We require a path to install to and a path to symlink to. The reason for this is that the script can be re-run in order to update"
-    output "     cleanly. The path we'll ask you for is a base path for the releases to be installed to so if you select the default of:" false true
-    output "         $DEFAULT_LOCAL_RELEASE_PATH" false true
-    output "     then we will create a sub-directory under here for every release and symlink the latest install to the final install path (which" false true
-    output "     the nginx config points at. This is so that roll-backs can be done easier and we can perform a complete install before finally" false true
-    output "     switching the nginx config over which'll minimise downtime on upgrades" false true
-    while true; do
-        output "What base directory do you want to install to ? (Press 'enter' for the default of $DEFAULT_LOCAL_RELEASE_PATH)"
-        read -r p
-        if [[ $p == "" ]]; then
-            p=$DEFAULT_LOCAL_RELEASE_PATH
-        fi
-        output_log "attempting to use base path of: $DEFAULT_LOCAL_RELEASE_PATH"
-        if [[ ! -d $p ]]; then
-            while true; do
-                output "Directory '${p}' doesn't exist - should we create it ? [y|n] (Press enter for default of 'y')"
-                read -r -s -n 1 c
-                if [[ $c == "" ]] || [[ $c == "y" ]]; then
-                    output_log "user opted to proceed"
-                    mkdir -p $p
-                    if [[ ! -d $p ]]; then
-                        output "ERROR : Tried to create directory $p and couldn't, exiting"
-                        exit 0
-                    fi
-                    RELEASE_PATH=$p
-                    break 2
-                elif [[ $c == n ]]; then
-                    output "ERROR : Can't continue without creating releases directory, exiting"
-                    exit 0
-                fi
-            done
-        else
-            RELEASE_PATH=$p
-            break
-        fi
-    done
+    if [[ $LOCAL_INSTALL == true ]]; then
 
-    # check where to symlink to
-    while true; do
-        output "What path should the release be symlinked to ? (Press enter for the default of $DEFAULT_SYMLINK_PATH)"
-        read -r p
-        if [[ $p == "" ]]; then
-            p=$DEFAULT_SYMLINK_PATH
-        fi
-        SYMLINK_PATH=$p
-        output_log "attempting to use path of: $SYMLINK_PATH"
-        if [[ -f $SYMLINK_PATH ]] && [[ ! -L $SYMLINK_PATH ]]; then
-            output "This path appears to already exist and be a regular file rather than a symlink - Can't continue"
-            exit 0
-        elif [[ -L $SYMLINK_PATH ]]; then
-            # symlink exists, go into update mode
-            output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
-            while true; do
-                read -r -s -n 1 c
-                if [[ $c == "e" ]]; then
-                    output "Ok, exiting"
-                    exit 0
+        #######################################################################
+        #                        AUTOMATED LOCAL SETUP                        #
+        #######################################################################
+        if [[ $JUSTDOIT == true ]]; then
+            RELEASE_PATH=$DEFAULT_LOCAL_RELEASE_PATH
+            SYMLINK_PATH=$DEFAULT_SYMLINK_PATH
+            # user
+            LOCAL_USER=$DEFAULT_USER
+            USERDATA=`getent passwd LOCAL_USER`
+            if [[ $USERDATA != *"LOCAL_USER"* ]]; then
+                useradd -r -d $RELEASE_PATH $u
+                if [[ ! -d $RELEASE_PATH ]]; then
+                    mkdir -p $RELEASE_PATH
                 fi
-                if [[ $c == "y" ]] || [[ $c == "" ]]; then
-                    output_log "user pressed '${c}'"
-                    output_log "NOTE :: RUNNING IN UPDATE MODE FROM NOW ON"
-                    UPDATE_MODE=true
-                    break 2
-                elif [[ $c == n ]]; then
-                    while true; do
-                        output "Ok, do you want to continue to install anyway ? If you select yes then we'll unlink/delete things as needed [y|n] (Press enter for the default of 'y')"
-                        read -r -s -n 1 b
-                        if [[ $b == "y" ]] || [[ $b == "" ]]; then
-                            output "Ok, continuing on - you won't be prompted for any overrides"
-                            break 3
-                        elif [[ $b == "n" ]]; then
-                            output "Ok, I can't continue - you'll need to complete the install manually"
-                            exit 0
-                        fi
-                    done
-                fi
-            done
-        else
-            # no file currently present - bog standard normal install
-            break
-        fi
-    done
-
-
-    # determine user to install under
-    while true; do
-        output "I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
-        read -r u
-        if [[ $u == "" ]]; then
-            u=$DEFAULT_USER
-        fi
-        USERDATA=`getent passwd $u`
-        if [[ $USERDATA == *"$u"* ]]; then
-            # user exists
-            while true; do
-                output "User '$u' already exists - are you sure you want to continue? [y|n] (enter for default of 'y')"
-                read -r -s -n 1 c
-                if [[ $c == "" ]]; then
-                    c="y"
-                fi
-                if [[ $c == "y" ]]; then
-                    output_log "continuing using this user"
-                    LOCAL_USER=$u
-                    break
-                elif [[ $c == "n" ]]; then
-                    output "Selected to not continue, exiting"
-                    exit 0
-                fi
-            done
-        else
-            while true; do
-                output "User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
-                read -r -s -n 1 c
-                if [[ $c == "" ]]; then
-                    c="y"
-                fi
-                if [[ $c == "y" ]]; then
-                    output "Creating user '${u}'...." true
-                    useradd -r -d $RELEASE_PATH $u
-                    if [[ ! -d $RELEASE_PATH ]]; then
-                        mkdir -p $RELEASE_PATH
-                    fi
-                    chown ${u}:${u} $RELEASE_PATH
-                    output "done!" false true
-                    LOCAL_USER=$u
-                    break
-                elif [[ $c == "n" ]]; then
-                    output "Can't create user - can't continue"
-                    exit 0
-                fi
-            done
-        fi
-        break
-    done
-
-
-    # check mongo
-    if [[ `command -v mongod` ]]; then
-        output "MongoDB is already installed, not installing"
-        CUR_MONGO_VERSION=`mongod --version | grep "db version" | sed "s?db version v??"`
-        output_log "mongo version currently installed: $CUR_MONGO_VERSION"
-        version_check $CUR_MONGO_VERSION $MIN_MONGO_VERSION
-        MONGOCHK=$?
-        output_log "mongo check is $MONGOCHK"
-        if [[ $MONGOCHK == 2 ]]; then
-            output "Warning:: this version of mongo (${CUR_MONGO_VERSION}) is below the minimum requirement of ${MIN_MONGO_VERSION} - you'll need to update this yourself"
-            sleep 5
-        else
-            output "Mongo version (${CUR_MONGO_VERSION}) is above minimum of $MIN_MONGO_VERSION - continuing"
-            MONGO_INSTALLED=true
-        fi
-    else
-        while true; do
-            output "MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
-            read -r -s -n 1 c
-            if [[ $c == "" ]]; then
-                c="y"
+                chown ${u}:${u} $RELEASE_PATH
             fi
-            if [[ $c == "y" ]]; then
-                output_log "opted to install mongo"
+            # symlink
+            if [[ -f $SYMLINK_PATH ]] && [[ ! -L $SYMLINK_PATH ]]; then
+                output "This path appears to already exist and be a regular file rather than a symlink - Can't continue"
+                exit 0
+            elif [[ -L $SYMLINK_PATH ]]; then
+                UPDATE_MODE=true
+            fi
+            # mongo
+            if [[ `command -v mongod` ]]; then
+                output "MongoDB is already installed, not installing"
+                CUR_MONGO_VERSION=`mongod --version | grep "db version" | sed "s?db version v??"`
+                output_log "mongo version currently installed: $CUR_MONGO_VERSION"
+                version_check $CUR_MONGO_VERSION $MIN_MONGO_VERSION
+                MONGOCHK=$?
+                if [[ $MONGOCHK == 2 ]]; then
+                    output "Warning:: this version of mongo (${CUR_MONGO_VERSION}) is below the minimum requirement of ${MIN_MONGO_VERSION} - you'll need to update this yourself"
+                    sleep 5
+                fi
+            else
                 MONGO_INSTALL=true
                 MONGO_INSTALLED=true
-                break
-            elif [[ $c == "n" ]]; then
-                output_log "opted not to install mongo"
-                MONGO_INSTALL=false
-                break
             fi
-        done
-    fi
-
-    # check redis
-    if [[ `command -v redis-server` ]]; then
-        output "Redis is already installed, not installing"
-        CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
-        output_log "Redis Version: $CUR_REDIS_VERSION"
-        version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
-        REDISCHK=$?
-        if [[ $REDISCHK == 2 ]]; then
-            output "Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
-            sleep 5
-        else
-            output "Redis version (${CUR_REDIS_VERSION}) is above minimum of $MIN_REDIS_VERSION - continuing"
-            REDIS_INSTALLED=true
-        fi
-    else
-        while true; do
-            output "Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
-            read -r -s -n 1 c
-            if [[ $c == "" ]]; then
-                c="y"
-            fi
-            if [[ $c == "y" ]]; then
-                output_log "opted to install redis"
+            # redis
+            if [[ `command -v redis-server` ]]; then
+                output "Redis is already installed, not installing"
+                CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
+                output_log "Redis Version: $CUR_REDIS_VERSION"
+                version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
+                REDISCHK=$?
+                if [[ $REDISCHK == 2 ]]; then
+                    output "Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
+                    sleep 5
+                fi
+            else
                 REDIS_INSTALL=true
                 REDIS_INSTALLED=true
-                break
-            elif [[ $c == "n" ]]; then
-                output_log "opted not to install redis"
-                REDIS_INSTALL=false
+            fi
+            break
+        fi
+
+
+        #######################################################################
+        #                        IN-PERSON LOCAL SETUP                        #
+        #######################################################################
+        output " We require a path to install to and a path to symlink to. The reason for this is that the script can be re-run in order to update"
+        output "     cleanly. The path we'll ask you for is a base path for the releases to be installed to so if you select the default of:" false true
+        output "         $DEFAULT_LOCAL_RELEASE_PATH" false true
+        output "     then we will create a sub-directory under here for every release and symlink the latest install to the final install path (which" false true
+        output "     the nginx config points at. This is so that roll-backs can be done easier and we can perform a complete install before finally" false true
+        output "     switching the nginx config over which'll minimise downtime on upgrades" false true
+        while true; do
+            output "What base directory do you want to install to ? (Press 'enter' for the default of $DEFAULT_LOCAL_RELEASE_PATH)"
+            read -r p
+            if [[ $p == "" ]]; then
+                p=$DEFAULT_LOCAL_RELEASE_PATH
+            fi
+            output_log "attempting to use base path of: $DEFAULT_LOCAL_RELEASE_PATH"
+            if [[ ! -d $p ]]; then
+                while true; do
+                    output "Directory '${p}' doesn't exist - should we create it ? [y|n] (Press enter for default of 'y')"
+                    read -r -s -n 1 c
+                    if [[ $c == "" ]] || [[ $c == "y" ]]; then
+                        output_log "user opted to proceed"
+                        mkdir -p $p
+                        if [[ ! -d $p ]]; then
+                            output "ERROR : Tried to create directory $p and couldn't, exiting"
+                            exit 0
+                        fi
+                        RELEASE_PATH=$p
+                        break 2
+                    elif [[ $c == n ]]; then
+                        output "ERROR : Can't continue without creating releases directory, exiting"
+                        exit 0
+                    fi
+                done
+            else
+                RELEASE_PATH=$p
                 break
             fi
         done
-    fi
-fi
 
+        # check where to symlink to
+        while true; do
+            output "What path should the release be symlinked to ? (Press enter for the default of $DEFAULT_SYMLINK_PATH)"
+            read -r p
+            if [[ $p == "" ]]; then
+                p=$DEFAULT_SYMLINK_PATH
+            fi
+            SYMLINK_PATH=$p
+            output_log "attempting to use path of: $SYMLINK_PATH"
+            if [[ -f $SYMLINK_PATH ]] && [[ ! -L $SYMLINK_PATH ]]; then
+                output "This path appears to already exist and be a regular file rather than a symlink - Can't continue"
+                exit 0
+            elif [[ -L $SYMLINK_PATH ]]; then
+                # symlink exists, go into update mode
+                output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
+                while true; do
+                    read -r -s -n 1 c
+                    if [[ $c == "e" ]]; then
+                        output "Ok, exiting"
+                        exit 0
+                    fi
+                    if [[ $c == "y" ]] || [[ $c == "" ]]; then
+                        output_log "user pressed '${c}'"
+                        output_log "NOTE :: RUNNING IN UPDATE MODE FROM NOW ON"
+                        UPDATE_MODE=true
+                        break 2
+                    elif [[ $c == n ]]; then
+                        while true; do
+                            output "Ok, do you want to continue to install anyway ? If you select yes then we'll unlink/delete things as needed [y|n] (Press enter for the default of 'y')"
+                            read -r -s -n 1 b
+                            if [[ $b == "y" ]] || [[ $b == "" ]]; then
+                                output "Ok, continuing on - you won't be prompted for any overrides"
+                                break 3
+                            elif [[ $b == "n" ]]; then
+                                output "Ok, I can't continue - you'll need to complete the install manually"
+                                exit 0
+                            fi
+                        done
+                    fi
+                done
+            else
+                # no file currently present - bog standard normal install
+                break
+            fi
+        done
+
+
+        # determine user to install under
+        while true; do
+            output "I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
+            read -r u
+            if [[ $u == "" ]]; then
+                u=$DEFAULT_USER
+            fi
+            USERDATA=`getent passwd $u`
+            if [[ $USERDATA == *"$u"* ]]; then
+                # user exists
+                while true; do
+                    output "User '$u' already exists - are you sure you want to continue? [y|n] (enter for default of 'y')"
+                    read -r -s -n 1 c
+                    if [[ $c == "" ]]; then
+                        c="y"
+                    fi
+                    if [[ $c == "y" ]]; then
+                        output_log "continuing using this user"
+                        LOCAL_USER=$u
+                        break
+                    elif [[ $c == "n" ]]; then
+                        output "Selected to not continue, exiting"
+                        exit 0
+                    fi
+                done
+            else
+                while true; do
+                    output "User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
+                    read -r -s -n 1 c
+                    if [[ $c == "" ]]; then
+                        c="y"
+                    fi
+                    if [[ $c == "y" ]]; then
+                        output "Creating user '${u}'...." true
+                        useradd -r -d $RELEASE_PATH $u
+                        if [[ ! -d $RELEASE_PATH ]]; then
+                            mkdir -p $RELEASE_PATH
+                        fi
+                        chown ${u}:${u} $RELEASE_PATH
+                        output "done!" false true
+                        LOCAL_USER=$u
+                        break
+                    elif [[ $c == "n" ]]; then
+                        output "Can't create user - can't continue"
+                        exit 0
+                    fi
+                done
+            fi
+            break
+        done
+
+
+        # check mongo
+        if [[ `command -v mongod` ]]; then
+            output "MongoDB is already installed, not installing"
+            CUR_MONGO_VERSION=`mongod --version | grep "db version" | sed "s?db version v??"`
+            output_log "mongo version currently installed: $CUR_MONGO_VERSION"
+            version_check $CUR_MONGO_VERSION $MIN_MONGO_VERSION
+            MONGOCHK=$?
+            output_log "mongo check is $MONGOCHK"
+            if [[ $MONGOCHK == 2 ]]; then
+                output "Warning:: this version of mongo (${CUR_MONGO_VERSION}) is below the minimum requirement of ${MIN_MONGO_VERSION} - you'll need to update this yourself"
+                sleep 5
+            else
+                output "Mongo version (${CUR_MONGO_VERSION}) is above minimum of $MIN_MONGO_VERSION - continuing"
+                MONGO_INSTALLED=true
+            fi
+        else
+            while true; do
+                output "MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+                read -r -s -n 1 c
+                if [[ $c == "" ]]; then
+                    c="y"
+                fi
+                if [[ $c == "y" ]]; then
+                    output_log "opted to install mongo"
+                    MONGO_INSTALL=true
+                    MONGO_INSTALLED=true
+                    break
+                elif [[ $c == "n" ]]; then
+                    output_log "opted not to install mongo"
+                    MONGO_INSTALL=false
+                    break
+                fi
+            done
+        fi
+
+        # check redis
+        if [[ `command -v redis-server` ]]; then
+            output "Redis is already installed, not installing"
+            CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
+            output_log "Redis Version: $CUR_REDIS_VERSION"
+            version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
+            REDISCHK=$?
+            if [[ $REDISCHK == 2 ]]; then
+                output "Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
+                sleep 5
+            else
+                output "Redis version (${CUR_REDIS_VERSION}) is above minimum of $MIN_REDIS_VERSION - continuing"
+                REDIS_INSTALLED=true
+            fi
+        else
+            while true; do
+                output "Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+                read -r -s -n 1 c
+                if [[ $c == "" ]]; then
+                    c="y"
+                fi
+                if [[ $c == "y" ]]; then
+                    output_log "opted to install redis"
+                    REDIS_INSTALL=true
+                    REDIS_INSTALLED=true
+                    break
+                elif [[ $c == "n" ]]; then
+                    output_log "opted not to install redis"
+                    REDIS_INSTALL=false
+                    break
+                fi
+            done
+        fi
+    fi
+    break
+done
 
 #######################################################################
 #                      PACKAGE INSTALL QUESTIONS                      #
@@ -1417,12 +1556,22 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 REDIS_INSTALLED=false
                 read -n 1 n
                 if [[ $MONGO_INSTALL == true ]]; then
-                    output "As redis isn't going to be installed locally, do you still want to install MongoDB ? [y|n] (press enter for the default of 'y')"
-                    read -s -r -n 1 n
-                    output_log "user entered '${n}'"
-                    if [[ $n == "n" ]]; then
-                        MONGO_INSTALL=false
-                    fi
+                    while true; do
+                        if [[ $BYPASSALL == true ]]; then
+                            output "BYPASS - installing mongo even without redis present"
+                            break
+                        fi
+                        output "As redis isn't going to be installed locally, do you still want to install MongoDB ? [y|n] (press enter for the default of 'y')"
+                        read -s -r -n 1 n
+                        output_log "user entered '${n}'"
+                        if [[ $n == "n" ]]; then
+                            MONGO_INSTALL=false
+                            break
+                        elif [[ $n == "y" ]]; then
+                            MONGO_INSTALL=true
+                            break
+                        fi
+                    done
                 fi
             fi
             if [[ $MONGO_INSTALL == true ]]; then
@@ -1450,7 +1599,9 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         if [[ ! `command -v redis-server` ]]; then
             output "Warning :: Can't find the redis-server executable, this means it's not been installed when it looks like it should've been. Press any key to continue"
             REDIS_INSTALLED=false
-            read -n 1 n
+            if [[ $BYPASSALL == false ]]; then
+                read -n 1 n
+            fi
         else
             CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
             version_check $CUR_REDIS_VERSION $MIN_REDIS_VERSION
@@ -1459,7 +1610,9 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             if [[ $REDISCHK == 2 ]]; then
                 output "Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself - Press any key to continue"
                 REDIS_INSTALLED=false
-                read -n 1 n
+                if [[ $BYPASSALL == false ]]; then
+                    read -n 1 n
+                fi
             fi
         fi
     fi
@@ -1478,8 +1631,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             output "     and follow the install steps on this page" false true
             echo
         fi
-        output "Press any key to continue" false true
-        read -n 1 n
+        if [[ $BYPASSALL == false ]]; then
+            output "Press any key to continue" false true
+            read -n 1 n
+        fi
         echo
     elif [[ $REDIS_INSTALL == false ]]; then
         # only hit this bit if redis was installed already
@@ -1490,8 +1645,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output "         'REDIS_HOST', 'REDIS_PORT', 'REDIS_DB' and maybe'REDIS_PREFIX'" false true
         output "     in ${LOCAL_PATH}/.env" false true
         echo
-        output "Press any key to continue" false true
-        read -n 1 n
+        if [[ $BYPASSALL == false ]]; then
+            output "Press any key to continue" false true
+            read -n 1 n
+        fi
         echo
     fi
 
@@ -1501,8 +1658,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output "     need to change the variable in ${LOCAL_PATH}/.env to point to a MongoDB Server. The variable you'll" false true
         output "     have to change is 'MONGODB_PATH'" false true
         echo
-        output "Press any key to continue" false true
-        read -n 1 n
+        if [[ $BYPASSALL == false ]]; then
+            output "Press any key to continue" false true
+            read -n 1 n
+        fi
         echo
     elif [[ $MONGO_INSTALL == false ]]; then
         # only hit this bit if mongo was installed already
@@ -1511,8 +1670,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output "     with the default lack of credentials. If you want to secure MongoDB more or want to connect to a different" false true
         output "     MongoDB server then you'll need to edit the 'MONGODB_PATH' variable in ${LOCAL_PATH}/.env" false true
         echo
-        output "Press any key to continue" false true
-        read -n 1 n
+        if [[ $BYPASSALL == false ]]; then
+            output "Press any key to continue" false true
+            read -n 1 n
+        fi
         echo
     fi
 
@@ -1712,6 +1873,11 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     echo "     which'll cause the system to be completely restarted. [r|c] (Press enter for the default of 'c')"
     echo "     Please note: There's a risk of downtime from the moment you select an option"
     while true; do
+        if [[ $BYPASSALL == true ]]; then
+            output "defaulting to full restart on update"
+            UPDATE_RESTART=true
+            break
+        fi
         read -r -s -n 1 t
         #t=c
         if [[ $t == "" ]] || [[ $t == c ]]; then
