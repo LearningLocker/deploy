@@ -1244,7 +1244,7 @@ if [[ $LOCAL_INSTALL == true ]]; then
     else
         CLAM_INSTALLED=false
         while true; do
-            output "Learning Locker ideally works best with ClamAV installed but it is not an absolute requirement. Do you want to install it? [y|n] (press 'enter' for the default of 'y')"
+            output "Learning Locker ideally works best with ClamAV (anti virus software) installed but it is not an absolute requirement. Do you want to install it? [y|n] (press 'enter' for the default of 'y')"
             read -r -s -n 1 c
             output_log "user entered '${c}'"
             if [[ $c == "" ]]; then
