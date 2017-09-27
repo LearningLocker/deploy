@@ -646,6 +646,12 @@ function debian_install ()
         apt-get -y -qq install net-tools curl git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
     fi
 
+    if [[ ! `command -v pwgen ` ]]; then
+        if [[ $AUTOSETUPUSER == true ]]; then
+            apt-get -y -qq install pwgen
+        fi
+    fi
+
     if [[ ! `command -v python` ]]; then
         output "Something seems to have gone wrong in installing basic software - exiting"
         exit 0
@@ -798,6 +804,12 @@ function redhat_install ()
 {
     output "installing base software"
     yum -y install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG
+
+    if [[ ! `command -v pwgen ` ]]; then
+        if [[ $AUTOSETUPUSER == true ]]; then
+            yum -y install pwgen
+        fi
+    fi
 
     if [[ ! `command -v nodejs` ]]; then
         output "setting up nodejs repo and installing nodejs"
@@ -1027,6 +1039,7 @@ OUTPUT_LOG=${LOG_PATH}/install.log
 ERROR_LOG=$OUTPUT_LOG # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
+AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
 
 
 
@@ -1097,6 +1110,9 @@ while getopts "h?pnraksy:" opt; do
         JUSTDOIT=true
         if [[ $OPTARG == "2" ]]; then
             BYPASSALL=true
+        elif [[ $OPTARG == "3" ]]; then
+            BYPASSALL=true
+            AUTOSETUPUSER=true
         fi
         ;;
     esac
@@ -1721,6 +1737,14 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         RUN_INSTALL_CMD=false
         echo "[LL] do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
         while true; do
+            if [[ $AUTOSETUPUSER == true ]]; then
+                output "Automatic setup detected"
+                INSTALL_EMAIL="ht2testadmin@ht2labs.com"
+                INSTALL_ORG="testOrg"
+                INSTALL_PASSWD=`pwgen 8 1`
+                break
+            fi
+
             read -r -s -n 1 n
             if [[ $n == "" ]]; then
                 n="y"
@@ -1879,7 +1903,7 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     echo "     which'll cause the system to be completely restarted. [r|c] (Press enter for the default of 'c')"
     echo "     Please note: There's a risk of downtime from the moment you select an option"
     while true; do
-        if [[ $BYPASSALL == true ]]; then
+        if [[ $JUSTDOIT == true ]]; then
             output "defaulting to full restart on update"
             UPDATE_RESTART=true
             break
@@ -1968,4 +1992,15 @@ if [[ -d $TMPDIR ]]; then
 fi
 if [[ -d ${BUILDDIR}/learninglocker_node ]]; then
     rm -R ${BUILDDIR}/learninglocker_node
+fi
+
+
+if [[ $AUTOSETUPUSER == true ]]; then
+    echo
+    output "Auto-setup an account with following details:"
+    output " email    : $INSTALL_EMAIL"
+    output " org      : $INSTALL_ORG"
+    output " password : $INSTALL_PASSWD"
+    echo
+    echo
 fi
