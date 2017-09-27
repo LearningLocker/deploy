@@ -1139,7 +1139,7 @@ if [[ $LOCAL_INSTALL == true ]]; then
             output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
             while true; do
                 read -r -s -n 1 c
-                if [[ $c == "e" ]];
+                if [[ $c == "e" ]]; then
                     output "Ok, exiting"
                     exit 0
                 fi
