@@ -1142,7 +1142,8 @@ if [[ $LOCAL_INSTALL == true ]]; then
                 if [[ $c == "e" ]];
                     output "Ok, exiting"
                     exit 0
-                elif [[ $c == "y" ]] || [[ $c == "" ]]; then
+                fi
+                if [[ $c == "y" ]] || [[ $c == "" ]]; then
                     output_log "user pressed '${c}'"
                     output_log "NOTE :: RUNNING IN UPDATE MODE FROM NOW ON"
                     UPDATE_MODE=true
