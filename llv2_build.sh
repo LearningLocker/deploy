@@ -181,7 +181,9 @@ function print_spinner ()
 
 function output_log ()
 {
-    echo $1 >> $OUTPUT_LOG
+    if [[ -f $OUTPUT_LOG ]]; then
+        echo $1 >> $OUTPUT_LOG
+    fi
 }
 
 
@@ -440,7 +442,7 @@ function base_install ()
 
 function xapi_install ()
 {
-    output "Will now try and clone the git repo for XAPI. Will prompt for user/pass and may take some time...."
+    output "Will now try and clone the git repo for XAPI. May take some time...."
     # not checking for presence of 'git' command as done in git_clone_base()
 
     DO_XAPI_CHECKOUT=true;
@@ -980,7 +982,7 @@ DEFAULT_INSTALL_TYPE=l
 LOCAL_PATH=false
 LOCAL_USER=false
 TMPDIR=$_TD/.tmpdist
-GIT_BRANCH="v2"
+GIT_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
 BUILDDIR=$_TD
@@ -1160,9 +1162,13 @@ if [[ $LOCAL_INSTALL == true ]]; then
             exit 0
         elif [[ -L $SYMLINK_PATH ]]; then
             # symlink exists, go into update mode
-            output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n] (Press enter for the default of 'y')"
+            output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
             while true; do
                 read -r -s -n 1 c
+                if [[ $c == "e" ]]; then
+                    output "Ok, exiting"
+                    exit 0
+                fi
                 if [[ $c == "y" ]] || [[ $c == "" ]]; then
                     output_log "user pressed '${c}'"
                     output_log "NOTE :: RUNNING IN UPDATE MODE FROM NOW ON"
@@ -1684,6 +1690,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         if [[ $RUN_INSTALL_CMD == true ]]; then
             d=`pwd`
             cd $LOCAL_PATH
+            echo "[LL] Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
+            echo "     Attempt to manually start the Mongo service and then run this command:"
+            echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
+
             node cli/dist/server createSiteAdmin $INSTALL_EMAIL $INSTALL_ORG $INSTALL_PASSWD
             cd $d
         fi

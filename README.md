@@ -6,19 +6,33 @@ working instance. To do this it attempts to detect your operating system, instal
 then pull the code down from Github, run the build steps and install to whichever directory you've
 specified. You'll be prompted for everything required while you run the script.
 
-Due to the necessity to install software, you will need to run this script as the root user.
+Please run the required update script for your distro to ensure you have the latest version of all packages.
+
+.e.g
+```
+yum update
+```
+or
+```
+apt-get update && apt-get upgrade
+```
+
+
 
 
 ### QuickStart
-To install or update Learning Locker, run the install script as the root user, via one of the commands below. Then, follow the prompts given.
 
-**Install with cURL:**
+**You must run this script as root user. Typically this can be done by running `sudo su -`**
+
+To install or update Learning Locker, run the install script via one of the commands below. Then, follow the prompts given.
+
+**Install with cURL**
 ```sh
-curl -o- http://lrnloc.kr/install-v2 | bash
+curl -o- -L http://lrnloc.kr/installv2 > deployll.sh && bash deployll.sh
 ```
 **Install with Wget**:
 ```sh
-wget -qO- http://lrnloc.kr/install-v2 | bash
+wget -qO deployll.sh http://lrnloc.kr/installv2 && bash deployll.sh
 ```
 
 Alternatively, you can download the "llv2_build.sh" file from this repository and run the following command as the root user, then follow the prompts given.
