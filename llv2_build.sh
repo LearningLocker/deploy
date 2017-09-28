@@ -1781,6 +1781,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 else
                     INSTALL_PASSWD="ChangeMeN0w"
                 fi
+                RUN_INSTALL_CMD=true
                 break
             fi
 
