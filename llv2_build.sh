@@ -1231,6 +1231,8 @@ while true; do
                 if [[ $MONGOCHK == 2 ]]; then
                     output "Warning:: this version of mongo (${CUR_MONGO_VERSION}) is below the minimum requirement of ${MIN_MONGO_VERSION} - you'll need to update this yourself"
                     sleep 5
+                else
+                    MONGO_INSTALLED=true
                 fi
             else
                 MONGO_INSTALL=true
@@ -1246,6 +1248,8 @@ while true; do
                 if [[ $REDISCHK == 2 ]]; then
                     output "Warning:: this version of redis (${CUR_REDIS_VERSION}) is below the minimum requirement of ${MIN_REDIS_VERSION} - you'll need to update this yourself"
                     sleep 5
+                else
+                    REDIS_INSTALLED=true
                 fi
             else
                 REDIS_INSTALL=true
@@ -1567,6 +1571,17 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     #                                 LOCAL INSTALL                                 #
     #################################################################################
 
+    # check for the existance of the release path. If it doesn't exist, create it and chown it.
+    # this is because a user could've rm -rf'd the directory after useradd had created it
+    if [[ ! -d $RELEASE_PATH ]]; then
+        mkdir -p $RELEASE_PATH
+        chown $LOCAL_USER:$LOCAL_USER -R $RELEASE_PATH
+    else
+        DIR_USER=`ls -l $RELEASE_PATH | awk '{print $3}'`
+        if [[ $DIR_USER != $LOCAL_USER ]]; then
+            chown $LOCAL_USER:$LOCAL_USER -R $RELEASE_PATH
+        fi
+    fi
 
     # UBUNTU & DEBIAN
     if [[ $OS_VERSION == "Ubuntu" ]] || [[ $OS_VERSION == "Debian" ]]; then
