@@ -812,9 +812,13 @@ function redhat_install ()
     yum -y install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
-    if [[ ! `command -v pwgen ` ]]; then
-        if [[ $AUTOSETUPUSER == true ]]; then
-            yum -y install pwgen
+    if [[ ! `command -v pwmake` ]]; then
+        if [[ $OS_VERSION == Amazon ]]; then
+            yum -y install passwd >> $OUTPUT_LOG 2>>$ERROR_LOG
+        elif [[ ! `command -v pwgen ` ]]; then
+            if [[ $AUTOSETUPUSER == true ]]; then
+                yum -y install pwgen >> $OUTPUT_LOG 2>>$ERROR_LOG
+            fi
         fi
     fi
 
@@ -1755,7 +1759,13 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 output "Automatic setup detected"
                 INSTALL_EMAIL="ht2testadmin@ht2labs.com"
                 INSTALL_ORG="testOrg"
-                INSTALL_PASSWD=`pwgen 8 1`
+                if [[ `command -v pwgen` ]]; then
+                    INSTALL_PASSWD=`pwgen 8 1`
+                elif [[ `command -v pwmake` ]]; then
+                    INSTALL_PASSWD=`pwmake 64`
+                else
+                    INSTALL_PASSWD="ChangeMeN0w"
+                fi
                 break
             fi
 
