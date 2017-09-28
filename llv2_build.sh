@@ -1451,7 +1451,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             debian_mongo
         fi
         if [[ $CLAM_INSTALL == true ]]; then
-            redhat_clamav
+            debian_clamav
         fi
     elif [[ $OS_VERSION == "Redhat" ]]; then
         # BASE REDHAT stuff
