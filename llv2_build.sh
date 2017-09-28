@@ -693,7 +693,6 @@ function debian_nginx ()
     fi
 
     while true; do
-        echo
         output "The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
         read -r -s -n 1 n
         output_log "user entered '${n}'"
@@ -775,7 +774,9 @@ function redhat_epel ()
     if [[ $REDHAT_EPEL_INSTALLED == true ]]; then
         return
     fi
-    yum install epel-release >> $OUTPUT_LOG 2>>$ERROR_LOG
+    output "setting up EPEL repository...." true
+    yum install epel-release >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
     REDHAT_EPEL_INSTALLED=true
 }
 
@@ -791,12 +792,17 @@ function redhat_redis ()
 
 function redhat_mongo ()
 {
-    output "installing mongodb"
     redhat_epel
     mkdir -p /data/db
-    yum install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG
+    output "installing mongodb....." true
+    yum install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
+    output "setting semanage on mongodb....." true
     semanage port -a -t mongod_port_t -p tcp 27017 >> $OUTPUT_LOG 2>>$ERROR_LOG
-    service mongod start >> $OUTPUT_LOG 2>>$ERROR_LOG
+    output "done" true true
+    output "starting mongodb...."
+    service mongod start >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 }
 
 
@@ -814,7 +820,7 @@ function redhat_install ()
 
     if [[ ! `command -v nodejs` ]]; then
         output "setting up nodejs repo...." true
-        curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash - &
+        curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG &
         print_spinner true
         output "installing nodejs...." true
         yum -y install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG &
@@ -844,13 +850,12 @@ function redhat_nginx ()
     fi
 
     while true; do
-        echo
         output "The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
         if [[ $BYPASSALL == true ]]; then
             output "bypass defaulting to 'y'"
             break
         fi
-        read n
+        read -r -s -n 1 n
         output_log "user pressed '${n}'"
         if [[ $n == "" ]]; then
             n="y"
@@ -864,7 +869,9 @@ function redhat_nginx ()
         fi
     done
 
-    yum -y install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG
+    output "installing nginx...."
+    yum -y install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
     # remove default config if it exists
     if [[ -f /etc/nginx/conf.d/default.conf ]]; then
