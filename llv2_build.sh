@@ -252,6 +252,18 @@ function version_check ()
 }
 
 
+# simple function to check if a webserver is running on this machine on port 80 (our default setup). If it it, we should warn and/or present options to the user
+function webserver_check ()
+{
+    # first off check if we've got anything running locally
+    if [[ `netstat -lnt | grep ":80 "` ]]; then
+        output "You currently have a webserver running on port 80 on this server. This will need removing / resetting before our nginx config will work."
+        output " If this is an upgrade of an existing install then this is nothing to worry about. Press any key to continue"
+        read n
+    fi
+}
+
+
 #################################################################################
 #                            LEARNINGLOCKER FUNCTIONS                           #
 #################################################################################
@@ -1083,6 +1095,9 @@ done
 #                       LOCAL INSTALL QUESTIONS                       #
 #######################################################################
 if [[ $LOCAL_INSTALL == true ]]; then
+
+    # check for the presence of a local webserver
+    webserver_check
 
     # determine local installation path
     output " We require a path to install to and a path to symlink to. The reason for this is that the script can be re-run in order to update"
