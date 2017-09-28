@@ -802,8 +802,9 @@ function redhat_mongo ()
 
 function redhat_install ()
 {
-    output "installing base software"
-    yum -y install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG
+    output "installing base software...." true
+    yum -y install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
     if [[ ! `command -v pwgen ` ]]; then
         if [[ $AUTOSETUPUSER == true ]]; then
@@ -812,17 +813,23 @@ function redhat_install ()
     fi
 
     if [[ ! `command -v nodejs` ]]; then
-        output "setting up nodejs repo and installing nodejs"
-        curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash -
-        yum -y install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
+        output "setting up nodejs repo...." true
+        curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash - &
+        print_spinner true
+        output "installing nodejs...." true
+        yum -y install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG &
+        print_spinner true
     else
         output "Node.js already installed"
     fi
 
     if [[ ! `command -v yarn` ]]; then
-        output "setting up yarn repo and installing yarn"
-        wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo >> $OUTPUT_LOG 2>>$ERROR_LOG
-        yum -y install yarn >> $OUTPUT_LOG 2>>$ERROR_LOG
+        output "setting up yarn repo...." true
+        wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo >> $OUTPUT_LOG 2>>$ERROR_LOG &
+        print_spinner true
+        output "installing yarn...." true
+        yum -y install yarn >> $OUTPUT_LOG 2>>$ERROR_LOG &
+        print_spinner true
     else
         output "yarn already installed"
     fi
@@ -1189,7 +1196,7 @@ while true; do
             LOCAL_USER=$DEFAULT_USER
             USERDATA=`getent passwd $LOCAL_USER`
             if [[ $USERDATA != *"$LOCAL_USER"* ]]; then
-                useradd -r -d $RELEASE_PATH $u
+                useradd -r -d $RELEASE_PATH $LOCAL_USER
                 if [[ ! -d $RELEASE_PATH ]]; then
                     mkdir -p $RELEASE_PATH
                 fi
