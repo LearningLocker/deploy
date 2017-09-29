@@ -1062,6 +1062,7 @@ PACKAGE_INSTALL=false
 DEFAULT_USER=learninglocker
 DEFAULT_SYMLINK_PATH=/usr/local/learninglocker/current
 DEFAULT_LOCAL_RELEASE_PATH=/usr/local/learninglocker/releases
+DEFAULT_PID_PATH=/var/run
 DEFAULT_INSTALL_TYPE=l
 LOCAL_PATH=false
 LOCAL_USER=false
@@ -1801,7 +1802,11 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
 
     # set up the pid & log directories
-    PID_PATH=/var/run
+    PID_PATH=$DEFAULT_PID_PATH
+    if [[ $LL_PID_PATH != "" ]]; then
+        PID_PATH=$LL_PID_PATH
+    fi
+
     chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
 
 
