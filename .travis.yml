@@ -2,7 +2,7 @@ dist: trusty
 sudo: required
 
 install: 
-  - sudo su -c "/home/travis/LearningLocker/deploy/llv2_build.sh -y 3"
+  - pwd && sudo su -c "./llv2_build.sh -y 3"
 
 script:
   - curl localhost/data/xAPI/about
