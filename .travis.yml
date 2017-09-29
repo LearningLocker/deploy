@@ -14,9 +14,9 @@ install:
   - mkdir ${PWD}/mongodb-linux-x86_64-${MONGODB}/data
   - ${PWD}/mongodb-linux-x86_64-${MONGODB}/bin/mongod --dbpath ${PWD}/mongodb-linux-x86_64-${MONGODB}/data --logpath ${PWD}/mongodb-linux-x86_64-${MONGODB}/mongodb.log --fork
   - sudo su -c "./llv2_build.sh -y 3"
+  - cat /var/log/learninglocker/install.log
 
 script:
-  - cat /var/log/learninglocker/install.log
   - curl localhost/data/xAPI/about
   - curl localhost/api
   - curl localhost
