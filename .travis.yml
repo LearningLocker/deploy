@@ -1,0 +1,22 @@
+dist: trusty
+sudo: required
+
+env:
+  global:
+    - MONGODB=3.2.13
+
+before_install:
+
+install:
+  - wget http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-${MONGODB}.tgz
+  - tar xzf mongodb-linux-x86_64-${MONGODB}.tgz
+  - ${PWD}/mongodb-linux-x86_64-${MONGODB}/bin/mongod --version
+  - mkdir ${PWD}/mongodb-linux-x86_64-${MONGODB}/data
+  - ${PWD}/mongodb-linux-x86_64-${MONGODB}/bin/mongod --dbpath ${PWD}/mongodb-linux-x86_64-${MONGODB}/data --logpath ${PWD}/mongodb-linux-x86_64-${MONGODB}/mongodb.log --fork
+  - sudo su -c "./llv2_build.sh -y 3"
+  - cat /var/log/learninglocker/install.log
+
+script:
+  - ./tests/testURL.sh -u localhost/data/xAPI/about
+  - ./tests/testURL.sh -u localhost/api
+  - ./tests/testURL.sh -u localhost

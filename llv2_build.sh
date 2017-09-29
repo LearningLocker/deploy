@@ -694,6 +694,10 @@ function debian_nginx ()
 
     while true; do
         output "The next part of the install process will install nginx and remove any default configs - press 'y' to continue or 'n' to abort (press 'enter' for the default of 'y')"
+        if [[ $BYPASSALL == true ]]; then
+            output "bypassing to 'y'"
+            break
+        fi
         read -r -s -n 1 n
         output_log "user entered '${n}'"
         if [[ $n == "" ]]; then
@@ -739,14 +743,14 @@ function debian_mongo ()
     if [[ $OS_VERSION == "Ubuntu" ]]; then
         if [[ $OS_VNO == "16.04" ]]; then
             output "Setting up mongo repo (Stock Ubuntu version is too old)"
-            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
+            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 >> $OUTPUT_LOG 2>>$ERROR_LOG
             echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
             systemctl unmask mongod
             apt-get -qq -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
             # Attempt to start via both services - one will likely fail but
             output "Attempting to start mongod service...."
-            output" If this fails you will need to check how the Mongo service is setup for your system and manually start it"
+            output "If this fails you will need to check how the Mongo service is setup for your system and manually start it"
             service mongod start
         fi
     else
@@ -759,9 +763,18 @@ function debian_mongo ()
 
 function debian_redis ()
 {
-    output "[LL] installing redis...." true
+    output "installing redis...." true
     apt-get -y -qq install redis-tools redis-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
+}
+
+
+function debian_clamav ()
+{
+    output "Installing ClamAV...." true
+    apt-get -y -qq install clamav >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
+    CLAM_INSTALLED=true
 }
 
 
@@ -793,16 +806,29 @@ function redhat_redis ()
 function redhat_mongo ()
 {
     redhat_epel
+
     mkdir -p /data/db
+
     output "installing mongodb....." true
-    yum install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    yum -y install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
+
     output "setting semanage on mongodb....." true
     semanage port -a -t mongod_port_t -p tcp 27017 >> $OUTPUT_LOG 2>>$ERROR_LOG
     output "done" true true
-    output "starting mongodb...."
+
+    output "starting mongodb...." true
     service mongod start >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
+}
+
+
+function redhat_clamav ()
+{
+    output "Installing ClamAV...." true
+    yum -y install clamav >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
+    CLAM_INSTALLED=true
 }
 
 
@@ -883,9 +909,9 @@ function redhat_nginx ()
     fi
 
     if [[ $OS_SUBVER == "Fedora" ]]; then
-        echo "[LL] Default fedora nginx config needs the server block in /etc/nginx/nginx.conf removing"
-        echo "     before learninglocker will work properly or it'll clash with the LL config"
-        echo "     Press any key to continue"
+        output "Default fedora nginx config needs the server block in /etc/nginx/nginx.conf removing"
+        output "before learninglocker will work properly or it'll clash with the LL config" false false 5
+        output "Press any key to continue" false false 5
         if [[ $BYPASSALL == false ]]; then
             read n
         fi
@@ -911,9 +937,9 @@ function redhat_nginx ()
 
 
     if [[ $OS_SUBVER == "CentOS" ]] || [[ $OS_SUBVER == "Fedora" ]]; then
-        echo "[LL] I need to punch a hole in selinux to continue. This is running the command:"
-        echo "         setsebool -P httpd_can_network_connect 1"
-        echo "     press 'y' to continue or 'n' to exit"
+        output "I need to punch a hole in selinux to continue. This is running the command:"
+        output "setsebool -P httpd_can_network_connect 1" false false 5
+        output "press 'y' to continue or 'n' to exit" false false 5
         while true; do
             if [[ $BYPASSALL == true ]]; then
                 output "bypass defaulting to 'y'"
@@ -966,7 +992,10 @@ function amazon_mongo ()
     echo "gpgcheck=1" >> $MONGO_REPO_FILE
     echo "enabled=1" >> $MONGO_REPO_FILE
     echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc" >> $MONGO_REPO_FILE
-    yum -y install mongodb-org
+
+    output "installing mongodb...." true
+    yum -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 }
 
 
@@ -1033,6 +1062,7 @@ PACKAGE_INSTALL=false
 DEFAULT_USER=learninglocker
 DEFAULT_SYMLINK_PATH=/usr/local/learninglocker/current
 DEFAULT_LOCAL_RELEASE_PATH=/usr/local/learninglocker/releases
+DEFAULT_PID_PATH=/var/run
 DEFAULT_INSTALL_TYPE=l
 LOCAL_PATH=false
 LOCAL_USER=false
@@ -1054,6 +1084,8 @@ SYMLINK_PATH=false
 MIN_MEMORY=970
 LOG_PATH=/var/log/learninglocker
 OUTPUT_LOG=${LOG_PATH}/install.log
+CLAM_INSTALL=false
+CLAM_PATH=false
 ERROR_LOG=$OUTPUT_LOG # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
@@ -1471,6 +1503,31 @@ while true; do
                 fi
             done
         fi
+
+
+        # check for clamAV
+        if [[ `command -v clamscan` ]]; then
+            output "ClamAV already installed"
+            CLAM_PATH=`command -v clamscan`
+            CLAM_INSTALLED=true
+        else
+            CLAM_INSTALLED=false
+            while true; do
+                output "Learning Locker ideally works best with ClamAV (anti virus software) installed but it is not an absolute requirement. Do you want to install it? [y|n] (press 'enter' for the default of 'y')"
+                read -r -s -n 1 c
+                output_log "user entered '${c}'"
+                if [[ $c == "" ]]; then
+                    c="y"
+                fi
+                if [[ $c == "y" ]]; then
+                    CLAM_INSTALL=true
+                    break
+                elif [[ $c == "n" ]]; then
+                    CLAM_INSTALL=false
+                    break
+                fi
+            done
+        fi
     fi
     break
 done
@@ -1592,9 +1649,15 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         if [[ $MONGO_INSTALL == true ]]; then
             debian_mongo
         fi
+        if [[ $CLAM_INSTALL == true ]]; then
+            debian_clamav
+        fi
     elif [[ $OS_VERSION == "Redhat" ]]; then
         # BASE REDHAT stuff
         redhat_nginx $TMPDIR $SYMLINK_PATH
+        if [[ $CLAM_INSTALL == true ]]; then
+            redhat_clamav
+        fi
     # FEDORA
         if [[ $OS_SUBVER == "Fedora" ]]; then
             if [[ $REDIS_INSTALL == true ]]; then
@@ -1642,6 +1705,11 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 redhat_mongo
             fi
         fi
+    fi
+
+    # get the clamAV path if needed
+    if [[ $CLAM_INSTALL == true ]]; then
+        CLAM_PATH=`command -v clamscan`
     fi
 
 
@@ -1734,7 +1802,15 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
 
     # set up the pid & log directories
-    PID_PATH=/var/run
+    PID_PATH=$DEFAULT_PID_PATH
+    if [[ $LL_PID_PATH != "" ]]; then
+        PID_PATH=$LL_PID_PATH
+        if [[ ! -d $PID_PATH ]]; then
+            mkdir -p $PID_PATH
+            chown $LOCAL_USER:$LOCAL_USER $PID_PATH -R
+        fi
+    fi
+
     chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
 
 
@@ -1750,6 +1826,11 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     cp $TMPDIR/.env $LOCAL_PATH/.env
     cp -R $TMPDIR/.git $LOCAL_PATH/
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
+
+    # update the .env with the path to clamav
+    if [[ $CLAM_INSTALLED == true ]]; then
+        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/.env
+    fi
 
     # set up symlink
     if [[ -f $SYMLINK_PATH ]]; then
@@ -1855,7 +1936,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             cd $LOCAL_PATH
             echo "[LL] Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
             echo "     Attempt to manually start the Mongo service and then run this command:"
-            echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
+            echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin YOUR.EMAIL@ADDRESS.COM ORGANISATION_NAME YOUR_PASSWORD"
 
             node cli/dist/server createSiteAdmin "$INSTALL_EMAIL" "$INSTALL_ORG" "$INSTALL_PASSWD"
             cd $d
