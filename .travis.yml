@@ -1,7 +1,7 @@
 before_install:
-    sudo -s
-    pwd
-    ls
+  - sudo -s
+  - pwd
+  - ls
 
 install: 
     ./llv2_build.sh -y 3
