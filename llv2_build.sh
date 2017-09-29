@@ -1805,6 +1805,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     PID_PATH=$DEFAULT_PID_PATH
     if [[ $LL_PID_PATH != "" ]]; then
         PID_PATH=$LL_PID_PATH
+        if [[ ! -d $PID_PATH ]]; then
+            mkdir -p $PID_PATH
+            chown $LOCAL_USER:$LOCAL_USER $PID_PATH -R
+        fi
     fi
 
     chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
