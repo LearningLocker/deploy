@@ -17,6 +17,6 @@ install:
   - cat /var/log/learninglocker/install.log
 
 script:
-  - curl localhost/data/xAPI/about
-  - curl localhost/api
-  - curl localhost
+  - ./tests/testURL.sh -u localhost/data/xAPI/about
+  - ./tests/testURL.sh -u localhost/api
+  - ./tests/testURL.sh -u localhost
