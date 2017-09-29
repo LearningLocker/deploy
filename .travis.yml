@@ -1,7 +1,5 @@
-before_install:
-  - sudo -s
-  - pwd
-  - ls
+dist: trusty
+sudo: required
 
 install: 
-    ./llv2_build.sh -y 3
+    sudo ./llv2_build.sh -y 3
