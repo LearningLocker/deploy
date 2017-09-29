@@ -2,4 +2,4 @@ dist: trusty
 sudo: required
 
 install: 
-    sudo ./llv2_build.sh -y 3
+    sudo su -c "/home/travis/LearningLocker/deploy/llv2_build.sh -y 3"
