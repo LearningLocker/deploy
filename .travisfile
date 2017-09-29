@@ -1,0 +1,5 @@
+before_install:
+    sudo su -
+
+install: 
+    ./llv2_build.sh -y 3
