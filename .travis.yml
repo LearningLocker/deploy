@@ -5,6 +5,7 @@ install:
   - pwd && sudo su -c "./llv2_build.sh -y 3"
 
 script:
+  - cat /var/log/learninglocker/install.log
   - curl localhost/data/xAPI/about
   - curl localhost/api
   - curl localhost
