@@ -22,12 +22,12 @@ script:
 
 after_script:
   - cat /var/log/learninglocker/install.log
-  - cat /var/log/learninglocker/xapi_stdout.log
-  - cat /var/log/learninglocker/api_stdout.log
-  - cat /var/log/learninglocker/ui_stdout.log
-  - cat /var/log/learninglocker/worker_stdout.log
-  - cat /var/log/learninglocker/xapi_stderr.log
-  - cat /var/log/learninglocker/api_stderr.log
-  - cat /var/log/learninglocker/ui_stderr.log
-  - cat /var/log/learninglocker/worker_stderr.log
+  - cat /var/log/learninglocker/xapi_stdout*.log
+  - cat /var/log/learninglocker/api_stdout*.log
+  - cat /var/log/learninglocker/ui_stdout*.log
+  - cat /var/log/learninglocker/worker_stdout*.log
+  - cat /var/log/learninglocker/xapi_stderr*.log
+  - cat /var/log/learninglocker/api_stderr*.log
+  - cat /var/log/learninglocker/ui_stderr*.log
+  - cat /var/log/learninglocker/worker_stderr*.log
   
