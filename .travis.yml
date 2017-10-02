@@ -1,0 +1,36 @@
+dist: trusty
+sudo: required
+
+env:
+  global:
+    - MONGODB=3.2.13
+    
+services:
+  - redis-server
+  
+before_install:
+  - wget http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-${MONGODB}.tgz
+  - tar xzf mongodb-linux-x86_64-${MONGODB}.tgz
+  - ${PWD}/mongodb-linux-x86_64-${MONGODB}/bin/mongod --version
+  - mkdir ${PWD}/mongodb-linux-x86_64-${MONGODB}/data
+  - ${PWD}/mongodb-linux-x86_64-${MONGODB}/bin/mongod --dbpath ${PWD}/mongodb-linux-x86_64-${MONGODB}/data --logpath ${PWD}/mongodb-linux-x86_64-${MONGODB}/mongodb.log --fork
+
+install:
+  - sudo su -c "./llv2_build.sh -y 3"
+
+script:
+  - ./tests/checkURL.sh -u localhost/data/xAPI/about
+  - ./tests/checkURL.sh -u localhost/api
+  - ./tests/checkURL.sh -u localhost
+
+after_script:
+  - cat /var/log/learninglocker/install.log
+  - cat /var/log/learninglocker/xapi_stdout*.log
+  - cat /var/log/learninglocker/api_stdout*.log
+  - cat /var/log/learninglocker/ui_stdout*.log
+  - cat /var/log/learninglocker/worker_stdout*.log
+  - cat /var/log/learninglocker/xapi_stderr*.log
+  - cat /var/log/learninglocker/api_stderr*.log
+  - cat /var/log/learninglocker/ui_stderr*.log
+  - cat /var/log/learninglocker/worker_stderr*.log
+  
