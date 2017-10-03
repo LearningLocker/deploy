@@ -164,6 +164,22 @@ function determine_os_version ()
 function show_help ()
 {
     echo "stub for help text"
+    exit 0
+}
+
+
+function show_install_end_text ()
+{
+    echo
+    echo "Thanks for installing Learning Locker v2"
+    echo
+    echo "If you need to add a new superuser (other than one created by the install process) then you can run this command:"
+    echo '    cd $LOCAL_PATH; node cli/dist/server createSiteAdmin "EMAIL" "ORG-NAME" "PASSWD"'
+    echo " with replacing the values in capitals with ones you want"
+    echo
+    echo "If you need to restart the services this script has installed then you can run this command:"
+    echo "    service pm2-${LOCAL_USER} restart"
+    echo
 }
 
 
@@ -1166,7 +1182,6 @@ while getopts "h?pnraksy:" opt; do
     case "$opt" in
     h|\?)
         show_help
-        exit 1
         ;;
     y)
         JUSTDOIT=true
@@ -1863,7 +1878,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ]; then
         RUN_INSTALL_CMD=false
-        echo "[LL] do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
+        output "do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
         while true; do
             if [[ $AUTOSETUPUSER == true ]]; then
                 output "Automatic setup detected"
@@ -1881,21 +1896,24 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             fi
 
             read -r -s -n 1 n
+            output_log "user entered '${n}'"
             if [[ $n == "" ]]; then
                 n="y"
             fi
             if [[ $n == "y" ]]; then
                 while true; do
-                    echo "[LL] please enter the organisation name"
+                    output "please enter the organisation name"
                     read e
+                    output_log "user entered '${e}'"
                     if [[ $e != "" ]]; then
                         INSTALL_ORG=$e
                         break
                     fi
                 done
                 while true; do
-                    echo "[LL] please enter the email address for the administrator account"
+                    output "please enter the email address for the administrator account"
                     read e
+                    output_log "user entered '${e}'"
                     if [[ $e != "" ]]; then
                         INSTALL_EMAIL=$e
                         break
@@ -1903,7 +1921,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 done
                 while true; do
                     while true; do
-                        echo "[LL] please enter the password for the administrator account"
+                        output "please enter the password for the administrator account"
                         read -r -s e
                         if [[ $e != "" ]]; then
                             INSTALL_PASSWD=$e
@@ -1911,13 +1929,14 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                         fi
                     done
                     while true; do
-                        echo "[LL] please confirm the password for the administrator account"
+                        output "please confirm the password for the administrator account"
                         read -r -s e
                         if [[ $e != "" ]]; then
                             if [[ $e == $INSTALL_PASSWD ]]; then
+                                output_log "user entered passwords that matched - not writing them to the log for obvious reasons"
                                 break 2
                             else
-                                echo "[LL] Sorry, passwords don't match. Please try again."
+                                output "Sorry, passwords don't match. Please try again."
                                 sleep 1
                                 break
                             fi
@@ -1926,10 +1945,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 done
                 while true; do
                     echo
-                    echo "[LL] Is the following information correct ?"
-                    echo "     Organisation  : $INSTALL_ORG"
-                    echo "     Email address : $INSTALL_EMAIL"
-                    echo "[y|n]"
+                    output "Is the following information correct ?"
+                    output "  Organisation  : $INSTALL_ORG"
+                    output "  Email address : $INSTALL_EMAIL"
+                    output "[y|n]"
                     read -r -s -n 1 e
                     if [[ $e == "y" ]]; then
                         break;
@@ -1948,9 +1967,9 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         if [[ $RUN_INSTALL_CMD == true ]]; then
             d=`pwd`
             cd $LOCAL_PATH
-            echo "[LL] Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
-            echo "     Attempt to manually start the Mongo service and then run this command:"
-            echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin YOUR.EMAIL@ADDRESS.COM ORGANISATION_NAME YOUR_PASSWORD"
+            output "Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
+            output "Attempt to manually start the Mongo service and then run this command:"
+            output "cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin YOUR.EMAIL@ADDRESS.COM ORGANISATION_NAME YOUR_PASSWORD"
 
             node cli/dist/server createSiteAdmin "$INSTALL_EMAIL" "$INSTALL_ORG" "$INSTALL_PASSWD"
             cd $d
@@ -1959,21 +1978,23 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     else
         echo
         if [[ $MONGO_INSTALLED == true ]]; then
-            echo "[LL] Mongo: Installed"
+            output "Mongo: Installed"
         else
-            echo "[LL] Mongo: Not Installed"
+            output "Mongo: Not Installed"
         fi
         if [[ $REDIS_INSTALLED == true ]]; then
-            echo "[LL] Redis: Installed"
+            output "Redis: Installed"
         else
-            echo "[LL] Redis: Not Installed"
+            output "Redis: Not Installed"
         fi
         echo
-        echo "[LL] Everything is installed but either mongoDB and/or Redis are missing from the local installation. Please edit the .env file"
-        echo "     in $LOCAL_PATH to point to your relevant servers then run this command:"
-        echo "         cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
+        output "Everything is installed but either mongoDB and/or Redis are missing from the local installation. Please edit the .env file"
+        output "in $LOCAL_PATH to point to your relevant servers then run this command:"
+        output "  cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
         echo
     fi
+
+    show_install_end_text
 
 elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     #################################################################################
