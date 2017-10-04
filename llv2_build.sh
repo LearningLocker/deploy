@@ -164,6 +164,8 @@ function determine_os_version ()
 function show_help ()
 {
     echo "stub for help text"
+    echo "CLI options:"
+    echo "  -b {branch name} : specific branch to check out"
     exit 0
 }
 
@@ -1178,25 +1180,26 @@ fi
 #################################################################################
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-while getopts "h?pnraksy:" opt; do
-    case "$opt" in
-    h|\?)
-        show_help
-        ;;
-    y)
-        JUSTDOIT=true
-        if [[ $OPTARG == "2" ]]; then
-            BYPASSALL=true
-        elif [[ $OPTARG == "3" ]]; then
-            BYPASSALL=true
-            AUTOSETUPUSER=true
-        fi
-        ;;
+while getopts ":h:y:b:" OPT; do
+    case "$OPT" in
+        h)
+            show_help
+            ;;
+        y)
+            JUSTDOIT=true
+            if [[ $OPTARG == "2" ]]; then
+                BYPASSALL=true
+            elif [[ $OPTARG == "3" ]]; then
+                BYPASSALL=true
+                AUTOSETUPUSER=true
+            fi
+            ;;
+        b)
+            GIT_BRANCH=$OPTARG
+            ;;
     esac
 done
 
-shift $((OPTIND-1))
-[ "$1" = "--" ] && shift
 
 
 #################################################################################
