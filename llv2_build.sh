@@ -380,12 +380,12 @@ function base_install ()
     # if the checkout dir exists, prompt the user for what to do
     DEFAULT_RM_TMP=y
     DO_BASE_INSTALL=true
-    if [[ -d learninglocker_node ]]; then
+    if [[ -d ${CHECKOUT_SUBDIR} ]]; then
         while true; do
             output "Temp directory already exists for checkout - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
-                rm -R learninglocker_node
+                rm -R ${CHECKOUT_SUBDIR}
                 break
             fi
             read -r -s -n 1 n
@@ -394,7 +394,7 @@ function base_install ()
             fi
             if [[ $n == "y" ]]; then
                 output "Ok, deleting temp directory...." true
-                rm -R learninglocker_node
+                rm -R ${CHECKOUT_SUBDIR}
                 output "done!" false true
                 break
             elif [[ $n == "n" ]]; then
@@ -430,15 +430,15 @@ function base_install ()
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
             output_log "running git clone"
-            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker learninglocker_node
-            if [[ -d learninglocker_node ]]; then
-                output_log "no learninglocker_node dir after git - problem"
+            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker ${CHECKOUT_SUBDIR}
+            if [[ -d ${CHECKOUT_SUBDIR} ]]; then
+                output_log "no ${CHECKOUT_SUBDIR} dir after git - problem"
                 break
             fi
         done
     fi
 
-    cd learninglocker_node
+    cd ${CHECKOUT_SUBDIR}
     GIT_REV=`git rev-parse --verify HEAD`
     if [[ ! -f .env ]]; then
         cp .env.example .env
@@ -1101,7 +1101,7 @@ TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
-BUILDDIR=$_TD
+BUILDDIR="${_TD}/learninglocker"
 MONGO_INSTALLED=false
 REDIS_INSTALLED=false
 PM2_OVERRIDE=false
@@ -1117,6 +1117,7 @@ LOG_PATH=/var/log/learninglocker
 OUTPUT_LOG=${LOG_PATH}/install.log
 CLAM_INSTALL=false
 CLAM_PATH=false
+CHECKOUT_SUBDIR="webapp"
 ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
@@ -1134,9 +1135,9 @@ if [ -d $TMPDIR ]; then
     rm -R $TMPDIR
 fi
 
-if [ -d "${BUILDDIR}learninglocker_node" ]; then
+if [ -d "${BUILDDIR}" ]; then
     echo "clearing old tmp dir"
-    rm -R ${BUILDDIR}learninglocker_node
+    rm -R ${BUILDDIR}
 fi
 
 if [ -d $TMPDIR ]; then
@@ -1601,9 +1602,11 @@ fi
 nvm_install
 
 # base install & build
-output "Running install step"
+output "Running install steps"
 cd $BUILDDIR
 base_install
+
+cd $BUILDDIR
 xapi_install
 
 # create tmp dir
@@ -1612,48 +1615,48 @@ mkdir -p $TMPDIR
 
 # package.json
 output "copying modules...." true
-if [[ ! -f ${BUILDDIR}/learninglocker_node/package.json ]]; then
-    output "can't copy file '${BUILDDIR}/learninglocker_node/package.json' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json ]]; then
+    output "can't copy file '${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp ${BUILDDIR}/learninglocker_node/package.json $TMPDIR/
+cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json ${TMPDIR}/${CHECKOUT_SUBDIR}
 
 # pm2 loader
-if [[ ! -f ${BUILDDIR}/learninglocker_node/pm2/all.json ]]; then
-    output "can't copy file '${BUILDDIR}/learninglocker_node/pm2/all.json' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/${CHECKOUT_SUBDIR}/pm2/all.json ]]; then
+    output "can't copy file '${BUILDDIR}/${CHECKOUT_SUBDIR}/pm2/all.json' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp ${BUILDDIR}/learninglocker_node/pm2/all.json.dist $TMPDIR/all.json
+cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${CHECKOUT_SUBDIR}/all.json
 
 # xapi config
-if [[ ! -f ${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist ]]; then
-    output "can't copy file '${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/xapi/pm2/xapi.json.dist ]]; then
+    output "can't copy file '${BUILDDIR}/xapi/pm2/xapi.json.dist' as it doesn't exist- exiting" false true
     exit 0
 fi
 if [[ ! -d ${TMPDIR}/xapi ]]; then
     mkdir -p ${TMPDIR}/xapi
 fi
-cp ${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist $TMPDIR/xapi/xapi.json
+cp ${BUILDDIR}/xapi/pm2/xapi.json.dist $TMPDIR/xapi/xapi.json
 
 # node_modules
-if [[ ! -d ${BUILDDIR}/learninglocker_node/node_modules ]]; then
-    output "can't copy directory '${BUILDDIR}/learninglocker_node/node_modules' as it doesn't exist- exiting" false true
+if [[ ! -d ${BUILDDIR}/${CHECKOUT_SUBDIR}/node_modules ]]; then
+    output "can't copy directory '${BUILDDIR}/${CHECKOUT_SUBDIR}/node_modules' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp -R ${BUILDDIR}/learninglocker_node/node_modules $TMPDIR/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
+cp -R ${BUILDDIR}/${CHECKOUT_SUBDIR}/node_modules $TMPDIR/${CHECKOUT_SUBDIR}/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
 print_spinner true
 
 output_log "copying nginx.conf.example to $TMPDIR"
-cp nginx.conf.example $TMPDIR/
+cp nginx.conf.example $TMPDIR/${CHECKOUT_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/learninglocker_node/.git to $TMPDIR"
-cp -R ${BUILDDIR}/learninglocker_node/.git $TMPDIR/
+output_log "copying ${BUILDDIR}/${CHECKOUT_SUBDIR}/.git to $TMPDIR"
+cp -R ${BUILDDIR}/${CHECKOUT_SUBDIR}/.git $TMPDIR/${CHECKOUT_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/learninglocker_node/.env to $TMPDIR"
-cp ${BUILDDIR}/learninglocker_node/.env $TMPDIR/
+output_log "copying ${BUILDDIR}/${CHECKOUT_SUBDIR}/.env to $TMPDIR"
+cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/.env $TMPDIR/${CHECKOUT_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/learninglocker_node/xapi/.env to $TMPDIR/xapi/"
-cp ${BUILDDIR}/learninglocker_node/xapi/.env $TMPDIR/xapi/
+output_log "copying ${BUILDDIR}/xapi/.env to $TMPDIR/xapi/"
+cp ${BUILDDIR}/xapi/.env $TMPDIR/xapi/
 checkCopyDir
 
 
@@ -1853,21 +1856,21 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
 
     output_log "reprocessing $TMPDIR/all.json"
-    reprocess_pm2 $TMPDIR/all.json $SYMLINK_PATH $LOG_PATH $PID_PATH
+    reprocess_pm2 $TMPDIR/${CHECKOUT_SUBDIR}/all.json $SYMLINK_PATH $LOG_PATH $PID_PATH
     output_log "reprocessing $TMPDIR/xapi/xapi.json"
     reprocess_pm2 $TMPDIR/xapi/xapi.json ${SYMLINK_PATH}/xapi $LOG_PATH $PID_PATH
 
 
     mkdir -p $LOCAL_PATH
     cp -R $TMPDIR/* $LOCAL_PATH/
-    # above line doesn't copy the .env so have to do this manually
-    cp $TMPDIR/.env $LOCAL_PATH/.env
-    cp -R $TMPDIR/.git $LOCAL_PATH/
+    # above line doesn't copy the 'dot' files so have to do this manually
+    cp $TMPDIR/${CHECKOUT_SUBDIR}/.env $LOCAL_PATH/${CHECKOUT_SUBDIR}/.env
+    cp -R $TMPDIR/${CHECKOUT_SUBDIR}/.git $LOCAL_PATH/${CHECKOUT_SUBDIR}/.git
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
 
     # update the .env with the path to clamav
     if [[ $CLAM_INSTALLED == true ]]; then
-        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/.env
+        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${CHECKOUT_SUBDIR}/.env
     fi
 
     # set up symlink
@@ -1975,7 +1978,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
         if [[ $RUN_INSTALL_CMD == true ]]; then
             d=`pwd`
-            cd $LOCAL_PATH
+            cd ${LOCAL_PATH}/${CHECKOUT_SUBDIR}
             output "Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
             output "Attempt to manually start the Mongo service and then run this command:"
             output "cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin YOUR.EMAIL@ADDRESS.COM ORGANISATION_NAME YOUR_PASSWORD"
@@ -2157,8 +2160,8 @@ echo "[LL] cleaning up temp directories"
 if [[ -d $TMPDIR ]]; then
     rm -R $TMPDIR
 fi
-if [[ -d ${BUILDDIR}/learninglocker_node ]]; then
-    rm -R ${BUILDDIR}/learninglocker_node
+if [[ -d ${BUILDDIR}/${CHECKOUT_SUBDIR} ]]; then
+    rm -R ${BUILDDIR}/${CHECKOUT_SUBDIR}
 fi
 
 
