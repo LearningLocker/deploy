@@ -2050,6 +2050,8 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     cp -nR ${SYMLINK_PATH}/xapi/storage/* ${LOCAL_PATH}/xapi/storage/
     output "done!" false true
 
+    chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
+
     # prompt user that we're about to do the swap over
     UPDATE_RESTART=false
     UPDATE_RELOAD=false
