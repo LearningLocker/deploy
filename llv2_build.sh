@@ -176,7 +176,7 @@ function show_install_end_text ()
     echo "Thanks for installing Learning Locker v2"
     echo
     echo "If you need to add a new superuser (other than one created by the install process) then you can run this command:"
-    echo '    cd $LOCAL_PATH; node cli/dist/server createSiteAdmin "EMAIL" "ORG-NAME" "PASSWD"'
+    echo '    cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin "EMAIL" "ORG-NAME" "PASSWD"'
     echo " with replacing the values in capitals with ones you want"
     echo
     echo "If you need to restart the services this script has installed then you can run this command:"
@@ -782,6 +782,7 @@ function debian_mongo ()
             output "Attempting to start mongod service...."
             output "If this fails you will need to check how the Mongo service is setup for your system and manually start it"
             service mongod start
+            systemctl enable mongod.service
         fi
     else
         output "installing mongodb...." true
@@ -1116,10 +1117,11 @@ LOG_PATH=/var/log/learninglocker
 OUTPUT_LOG=${LOG_PATH}/install.log
 CLAM_INSTALL=false
 CLAM_PATH=false
-ERROR_LOG=$OUTPUT_LOG # placeholder - only want one file for now, may be changed later
+ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
 AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
+WRITE_AUTOSETUP=false   # if -y is set to '4' then we will write to the output file (bottom of the script) for the auto generated credentials
 
 
 
@@ -1192,6 +1194,10 @@ while getopts ":h:y:b:" OPT; do
             elif [[ $OPTARG == "3" ]]; then
                 BYPASSALL=true
                 AUTOSETUPUSER=true
+            elif [[ $OPTARG == "4" ]]; then
+                BYPASSALL=true
+                AUTOSETUPUSER=true
+                WRITE_AUTOSETUP=true
             fi
             ;;
         b)
@@ -2164,4 +2170,11 @@ if [[ $AUTOSETUPUSER == true ]]; then
     output " password : $INSTALL_PASSWD"
     echo
     echo
+fi
+
+if [[ $WRITE_AUTOSETUP == true ]]; then
+    output_file=/home/ubuntu/ll_credentials.txt
+    echo "email    : $INSTALL_EMAIL" > $output_file
+    echo "org      : $INSTALL_ORG" >> $output_file
+    echo "password : $INSTALL_PASSWD" >> $output_file
 fi
