@@ -760,7 +760,7 @@ function debian_nginx ()
 
     NGINX_CONFIG=/etc/nginx/sites-available/learninglocker.conf
     XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
-    BASE_ENV=${PWD}/.env
+    BASE_ENV=${PWD}/${WEBAPP_SUBDIR}/.env
     rm /etc/nginx/sites-enabled/*
     mv ${1}/nginx.conf.example $NGINX_CONFIG
     ln -s $NGINX_CONFIG /etc/nginx/sites-enabled/learninglocker.conf
@@ -967,7 +967,7 @@ function redhat_nginx ()
 
     NGINX_CONFIG=/etc/nginx/conf.d/learninglocker.conf
     XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
-    BASE_ENV=${PWD}/.env
+    BASE_ENV=${PWD}/${WEBAPP_SUBDIR}/.env
     mv ${1}/nginx.conf.example $NGINX_CONFIG
     # sub in variables from the .envs to the nginx config
     setup_nginx_config $NGINX_CONFIG $BASE_ENV $XAPI_ENV $2
@@ -1709,7 +1709,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     # UBUNTU & DEBIAN
     if [[ $OS_VERSION == "Ubuntu" ]] || [[ $OS_VERSION == "Debian" ]]; then
-        debian_nginx $TMPDIR $SYMLINK_PATH
+        debian_nginx ${TMPDIR}/${WEBAPP_SUBDIR} $SYMLINK_PATH/${WEBAPP_SUBDIR}
         if [[ $REDIS_INSTALL == true ]]; then
             debian_redis
         fi
@@ -1721,7 +1721,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         fi
     elif [[ $OS_VERSION == "Redhat" ]]; then
         # BASE REDHAT stuff
-        redhat_nginx $TMPDIR $SYMLINK_PATH
+        redhat_nginx ${TMPDIR}/${WEBAPP_SUBDIR} $SYMLINK_PATH/${WEBAPP_SUBDIR}
         if [[ $CLAM_INSTALL == true ]]; then
             redhat_clamav
         fi
