@@ -578,6 +578,7 @@ function nvm_install ()
     output "running nvm install/update process...." true
     wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
+    sleep 5
 }
 
 
@@ -696,6 +697,10 @@ function debian_install ()
     else
         output "Node.js already installed"
     fi
+
+
+    INSTALLED_NODE_VERSION=`node --version`
+    output "node version - $INSTALLED_NODE_VERSION"
 
     if [[ ! `command -v yarn` ]]; then
         curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - >> $OUTPUT_LOG 2>>$ERROR_LOG
@@ -896,6 +901,10 @@ function redhat_install ()
     else
         output "Node.js already installed"
     fi
+
+
+    INSTALLED_NODE_VERSION=`node --version`
+    output "node version - $INSTALLED_NODE_VERSION"
 
     if [[ ! `command -v yarn` ]]; then
         output "setting up yarn repo...." true
@@ -1607,7 +1616,7 @@ elif [[ $OS_VERSION == "Redhat" ]]; then
 fi
 
 
-nvm_install
+#nvm_install
 
 # make sure dirs exist
 if [[ ! -d $BUILDDIR ]]; then
