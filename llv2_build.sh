@@ -2056,6 +2056,11 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     cp ${COPYFROMPATH}/all.json ${LOCAL_PATH}/${WEBAPP_SUBDIR}/all.json
     cp ${SYMLINK_PATH}/${XAPI_SUBDIR}/xapi.json ${LOCAL_PATH}/${XAPI_SUBDIR}/xapi.json
 
+    # as we're upgrading the install, we need to re-jig the all.json to reflect the new paths
+    if [[ $FORCEFULLRESTART == true ]]; then
+        sed -i "s?$SYMLINK_PATH?${SYMLINK_PATH}/${WEBAPP_SUBDIR}?" ${LOCAL_PATH}/${WEBAPP_SUBDIR}/all.json
+    fi
+
     # copy anything in the storage dirs over
     output "Copying user uploaded data in storage/ folders to new install....." true
     cp -nR ${COPYFROMPATH}/storage/* ${LOCAL_PATH}/${WEBAPP_SUBDIR}/storage/
@@ -2066,6 +2071,7 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     output "done!" false true
 
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
+
 
     # prompt user that we're about to do the swap over
     UPDATE_RESTART=false
