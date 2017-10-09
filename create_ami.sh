@@ -242,55 +242,56 @@ INSTANCE_ID="`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id/ 
 #########################################################################################################
 # get cert & keyfile                                                                                    #
 #########################################################################################################
-if [[ ! -d /tmp/cert ]]; then
-    mkdir -p /tmp/cert
-    chown $OS_USER:$OS_USER -R /tmp/cert
-else
-    DIR_USER=`ls -l /tmp/cert | awk '{print $3}'`
-    if [[ $DIR_USER != $OS_USER ]]; then
+if [[ $INSTANCE_TYPE == "instance" ]]; then
+    if [[ ! -d /tmp/cert ]]; then
+        mkdir -p /tmp/cert
         chown $OS_USER:$OS_USER -R /tmp/cert
-    fi
-fi
-
-cert_file=""
-key_file=""
-if [[ -f /tmp/cert/cert*.pem ]]; then
-    cert_file=$(ls -1 /tmp/cert/cert*.pem)
-fi
-if [[ -f /tmp/cert/pk*.pem ]]; then
-    key_file=$(ls -1 /tmp/cert/pk*.pem)
-fi
-
-if [ ! -r "$cert_file" -o ! -r "$key_file" ]; then
-    echo "Now transfer the private key and x.509 certificate by running:"
-    echo "    scp -i MY_SSH_KEY EC2_X509_CERT EC2_PRIVATE_KEY ${OS_USER}@${EC2_IPADDR}:/tmp/cert/"
-    echo "on your local machine - obviously replacing the paths to the various files"
-    echo "  the cert file should be called cert*.pem and the private key called pk*.pem"
-    echo
-    echo "    our standard form of this is:"
-    echo "    scp -i \$EC2_KEY \$AWS_X509_CERT \$AWS_X509_PK ${OS_USER}@${EC2_IPADDR}:/tmp/cert/"
-    echo
-    echo "You must have local access to these keys to continue. Press y when ready."
-    while true; do
-        read -r -s -n 1 n
-        if [[ $n == "y" ]] || [[ $n == "Y" ]]; then
-            echo "[*] Ok, continuing"
-            break
-        fi
-    done
-    echo -n "[*] Checking keys... "
-    cert_file=$(ls -1 /tmp/cert/cert*.pem)
-    key_file=$(ls -1 /tmp/cert/pk*.pem)
-    if [ ! -r "$cert_file" -o ! -r "$key_file" ]; then
-        echo "Key and/or certificate file missing. Aborting."
-        exit 0
     else
-        echo "Looks ok, continuing"
+        DIR_USER=`ls -l /tmp/cert | awk '{print $3}'`
+        if [[ $DIR_USER != $OS_USER ]]; then
+            chown $OS_USER:$OS_USER -R /tmp/cert
+        fi
     fi
-else
-    echo "[*] key & cert file found in /tmp/cert and appear valid - continuing"
-fi
 
+    cert_file=""
+    key_file=""
+    if [[ -f /tmp/cert/cert*.pem ]]; then
+        cert_file=$(ls -1 /tmp/cert/cert*.pem)
+    fi
+    if [[ -f /tmp/cert/pk*.pem ]]; then
+        key_file=$(ls -1 /tmp/cert/pk*.pem)
+    fi
+
+    if [ ! -r "$cert_file" -o ! -r "$key_file" ]; then
+        echo "Now transfer the private key and x.509 certificate by running:"
+        echo "    scp -i MY_SSH_KEY EC2_X509_CERT EC2_PRIVATE_KEY ${OS_USER}@${EC2_IPADDR}:/tmp/cert/"
+        echo "on your local machine - obviously replacing the paths to the various files"
+        echo "  the cert file should be called cert*.pem and the private key called pk*.pem"
+        echo
+        echo "    our standard form of this is:"
+        echo "    scp -i \$EC2_KEY \$AWS_X509_CERT \$AWS_X509_PK ${OS_USER}@${EC2_IPADDR}:/tmp/cert/"
+        echo
+        echo "You must have local access to these keys to continue. Press y when ready."
+        while true; do
+            read -r -s -n 1 n
+            if [[ $n == "y" ]] || [[ $n == "Y" ]]; then
+                echo "[*] Ok, continuing"
+                break
+            fi
+        done
+        echo -n "[*] Checking keys... "
+        cert_file=$(ls -1 /tmp/cert/cert*.pem)
+        key_file=$(ls -1 /tmp/cert/pk*.pem)
+        if [ ! -r "$cert_file" -o ! -r "$key_file" ]; then
+            echo "Key and/or certificate file missing. Aborting."
+            exit 0
+        else
+            echo "Looks ok, continuing"
+        fi
+    else
+        echo "[*] key & cert file found in /tmp/cert and appear valid - continuing"
+    fi
+fi
 
 #########################################################################################################
 # base system installs                                                                                  #
