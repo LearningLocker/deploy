@@ -313,11 +313,11 @@ function setup_init_script ()
 
 
     output "starting base processes...." true
-    su - $2 -c "cd ${1}/${CHECKOUT_SUBDIR}; pm2 start all.json"
+    su - $2 -c "cd ${1}/${WEBAPP_SUBDIR}; pm2 start all.json"
     output "done" true true
 
     output "starting xapi process...." true
-    su - $2 -c "cd ${1}/xapi; pm2 start xapi.json"
+    su - $2 -c "cd ${1}/${XAPI_SUBDIR}; pm2 start xapi.json"
     output "done" true true
 
     su - $2 -c "pm2 save"
@@ -383,12 +383,12 @@ function base_install ()
     # if the checkout dir exists, prompt the user for what to do
     DEFAULT_RM_TMP=y
     DO_BASE_INSTALL=true
-    if [[ -d ${CHECKOUT_SUBDIR} ]]; then
+    if [[ -d ${WEBAPP_SUBDIR} ]]; then
         while true; do
             output "Temp directory already exists for checkout - should I delete? [y|n] (enter is the default of ${DEFAULT_RM_TMP})"
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
-                rm -R ${CHECKOUT_SUBDIR}
+                rm -R ${WEBAPP_SUBDIR}
                 break
             fi
             read -r -s -n 1 n
@@ -397,7 +397,7 @@ function base_install ()
             fi
             if [[ $n == "y" ]]; then
                 output "Ok, deleting temp directory...." true
-                rm -R ${CHECKOUT_SUBDIR}
+                rm -R ${WEBAPP_SUBDIR}
                 output "done!" false true
                 break
             elif [[ $n == "n" ]]; then
@@ -433,15 +433,15 @@ function base_install ()
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
             output_log "running git clone"
-            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker ${CHECKOUT_SUBDIR}
-            if [[ -d ${CHECKOUT_SUBDIR} ]]; then
-                output_log "no ${CHECKOUT_SUBDIR} dir after git - problem"
+            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker ${WEBAPP_SUBDIR}
+            if [[ -d ${WEBAPP_SUBDIR} ]]; then
+                output_log "no ${WEBAPP_SUBDIR} dir after git - problem"
                 break
             fi
         done
     fi
 
-    cd ${CHECKOUT_SUBDIR}
+    cd ${WEBAPP_SUBDIR}
     GIT_REV=`git rev-parse --verify HEAD`
     if [[ ! -f .env ]]; then
         cp .env.example .env
@@ -498,7 +498,7 @@ function xapi_install ()
             output "Tmp directory already exists for checkout of xapi - should I delete? [y|n] (enter is the default of ${DEFAULT_RM_TMP})"
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
-                rm -R xapi
+                rm -R ${XAPI_SUBDIR}
                 break
             fi
             read n
@@ -507,7 +507,7 @@ function xapi_install ()
                 n=$DEFAULT_RM_TMP
             fi
             if [[ $n == "y" ]]; then
-                rm -R xapi
+                rm -R ${XAPI_SUBDIR}
                 break
             elif [[ $n == "n" ]]; then
                 output "ok, not removing it - could cause weirdness though so be warned"
@@ -522,15 +522,15 @@ function xapi_install ()
     if [[ $DO_XAPI_CHECKOUT -eq true ]]; then
         while true; do
             output_log "attempting git clone for xapi"
-            git clone -q https://github.com/LearningLocker/xapi-service.git xapi
-            if [[ -d xapi ]]; then
+            git clone -q https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
+            if [[ -d ${XAPI_SUBDIR} ]]; then
                 output_log "git clone appears to have failed"
                 break
             fi
         done
     fi
 
-    cd xapi/
+    cd ${XAPI_SUBDIR}/
 
     # sort out .env
     if [[ ! -f .env ]]; then
@@ -759,7 +759,7 @@ function debian_nginx ()
 
 
     NGINX_CONFIG=/etc/nginx/sites-available/learninglocker.conf
-    XAPI_ENV=${PWD}/xapi/.env
+    XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
     BASE_ENV=${PWD}/.env
     rm /etc/nginx/sites-enabled/*
     mv ${1}/nginx.conf.example $NGINX_CONFIG
@@ -966,7 +966,7 @@ function redhat_nginx ()
 
 
     NGINX_CONFIG=/etc/nginx/conf.d/learninglocker.conf
-    XAPI_ENV=${PWD}/xapi/.env
+    XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
     BASE_ENV=${PWD}/.env
     mv ${1}/nginx.conf.example $NGINX_CONFIG
     # sub in variables from the .envs to the nginx config
@@ -1124,7 +1124,8 @@ LOG_PATH=/var/log/learninglocker
 OUTPUT_LOG=${LOG_PATH}/install.log
 CLAM_INSTALL=false
 CLAM_PATH=false
-CHECKOUT_SUBDIR="webapp"
+WEBAPP_SUBDIR="webapp"
+XAPI_SUBDIR="xapi"
 ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
@@ -1626,57 +1627,57 @@ output "creating $TMPDIR"
 if [[ ! -d $TMPDIR ]]; then
     mkdir -p $TMPDIR
 fi
-if [[ ! -d ${TMPDIR}/${CHECKOUT_SUBDIR}/ ]]; then
-    mkdir -p ${TMPDIR}/${CHECKOUT_SUBDIR}
+if [[ ! -d ${TMPDIR}/${WEBAPP_SUBDIR}/ ]]; then
+    mkdir -p ${TMPDIR}/${WEBAPP_SUBDIR}
 fi
-if [[ ! -d ${TMPDIR}/xapi/ ]]; then
-    mkdir -p ${TMPDIR}/xapi
+if [[ ! -d ${TMPDIR}/${XAPI_SUBDIR}/ ]]; then
+    mkdir -p ${TMPDIR}/${XAPI_SUBDIR}
 fi
 
 # package.json
 output "copying modules...." true
-if [[ ! -f ${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json ]]; then
-    output "can't copy file '${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/${WEBAPP_SUBDIR}/package.json ]]; then
+    output "can't copy file '${BUILDDIR}/${WEBAPP_SUBDIR}/package.json' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json ${TMPDIR}/${CHECKOUT_SUBDIR}/
+cp ${BUILDDIR}/${WEBAPP_SUBDIR}/package.json ${TMPDIR}/${WEBAPP_SUBDIR}/
 
 # pm2 loader
-if [[ ! -f ${BUILDDIR}/${CHECKOUT_SUBDIR}/pm2/all.json ]]; then
-    output "can't copy file '${BUILDDIR}/${CHECKOUT_SUBDIR}/pm2/all.json' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json ]]; then
+    output "can't copy file '${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${CHECKOUT_SUBDIR}/all.json
+cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
 
 # xapi config
-if [[ ! -f ${BUILDDIR}/xapi/pm2/xapi.json.dist ]]; then
-    output "can't copy file '${BUILDDIR}/xapi/pm2/xapi.json.dist' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist ]]; then
+    output "can't copy file '${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist' as it doesn't exist- exiting" false true
     exit 0
 fi
-if [[ ! -d ${TMPDIR}/xapi ]]; then
-    mkdir -p ${TMPDIR}/xapi
+if [[ ! -d ${TMPDIR}/${XAPI_SUBDIR} ]]; then
+    mkdir -p ${TMPDIR}/${XAPI_SUBDIR}
 fi
-cp ${BUILDDIR}/xapi/pm2/xapi.json.dist $TMPDIR/xapi/xapi.json
+cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
 
 # node_modules
-if [[ ! -d ${BUILDDIR}/${CHECKOUT_SUBDIR}/node_modules ]]; then
-    output "can't copy directory '${BUILDDIR}/${CHECKOUT_SUBDIR}/node_modules' as it doesn't exist- exiting" false true
+if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
+    output "can't copy directory '${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp -R ${BUILDDIR}/${CHECKOUT_SUBDIR}/node_modules $TMPDIR/${CHECKOUT_SUBDIR}/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
+cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules $TMPDIR/${WEBAPP_SUBDIR}/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
 print_spinner true
 
 output_log "copying nginx.conf.example to $TMPDIR"
-cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/nginx.conf.example $TMPDIR/${CHECKOUT_SUBDIR}/
+cp ${BUILDDIR}/${WEBAPP_SUBDIR}/nginx.conf.example $TMPDIR/${WEBAPP_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/${CHECKOUT_SUBDIR}/.git to $TMPDIR"
-cp -R ${BUILDDIR}/${CHECKOUT_SUBDIR}/.git $TMPDIR/${CHECKOUT_SUBDIR}/
+output_log "copying ${BUILDDIR}/${WEBAPP_SUBDIR}/.git to $TMPDIR"
+cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/.git $TMPDIR/${WEBAPP_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/${CHECKOUT_SUBDIR}/.env to $TMPDIR"
-cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/.env $TMPDIR/${CHECKOUT_SUBDIR}/
+output_log "copying ${BUILDDIR}/${WEBAPP_SUBDIR}/.env to $TMPDIR"
+cp ${BUILDDIR}/${WEBAPP_SUBDIR}/.env $TMPDIR/${WEBAPP_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/xapi/.env to $TMPDIR/xapi/"
-cp ${BUILDDIR}/xapi/.env $TMPDIR/xapi/
+output_log "copying ${BUILDDIR}/${XAPI_SUBDIR}/.env to $TMPDIR/${XAPI_SUBDIR}/"
+cp ${BUILDDIR}/${XAPI_SUBDIR}/.env $TMPDIR/${XAPI_SUBDIR}/
 
 # full copy of remaining files
 #checkCopyDir
@@ -1880,22 +1881,22 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
 
 
-    output_log "reprocessing $TMPDIR/${CHECKOUT_SUBDIR}/all.json"
-    reprocess_pm2 $TMPDIR/${CHECKOUT_SUBDIR}/all.json $SYMLINK_PATH/${CHECKOUT_SUBDIR} $LOG_PATH $PID_PATH
-    output_log "reprocessing $TMPDIR/xapi/xapi.json"
-    reprocess_pm2 $TMPDIR/xapi/xapi.json ${SYMLINK_PATH}/xapi $LOG_PATH $PID_PATH
+    output_log "reprocessing $TMPDIR/${WEBAPP_SUBDIR}/all.json"
+    reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/all.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+    output_log "reprocessing $TMPDIR/${XAPI_SUBDIR}/xapi.json"
+    reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
 
 
     mkdir -p $LOCAL_PATH
     cp -R $TMPDIR/* $LOCAL_PATH/
     # above line doesn't copy the 'dot' files so have to do this manually
-    cp $TMPDIR/${CHECKOUT_SUBDIR}/.env $LOCAL_PATH/${CHECKOUT_SUBDIR}/.env
-    cp -R $TMPDIR/${CHECKOUT_SUBDIR}/.git $LOCAL_PATH/${CHECKOUT_SUBDIR}/.git
+    cp $TMPDIR/${WEBAPP_SUBDIR}/.env $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
+    cp -R $TMPDIR/${WEBAPP_SUBDIR}/.git $LOCAL_PATH/${WEBAPP_SUBDIR}/.git
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
 
     # update the .env with the path to clamav
     if [[ $CLAM_INSTALLED == true ]]; then
-        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${CHECKOUT_SUBDIR}/.env
+        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
     fi
 
     # set up symlink
@@ -2003,7 +2004,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
         if [[ $RUN_INSTALL_CMD == true ]]; then
             d=`pwd`
-            cd ${LOCAL_PATH}/${CHECKOUT_SUBDIR}
+            cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}
             output "Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
             output "Attempt to manually start the Mongo service and then run this command:"
             output "cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin YOUR.EMAIL@ADDRESS.COM ORGANISATION_NAME YOUR_PASSWORD"
@@ -2062,7 +2063,7 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     cp -R $TMPDIR/* $LOCAL_PATH/
 
     # block to determine directory format as it's changed/changing
-    COPYFROMPATH=${SYMLINK_PATH}/${CHECKOUT_SUBDIR}
+    COPYFROMPATH=${SYMLINK_PATH}/${WEBAPP_SUBDIR}
     FORCEFULLRESTART=false
     if [[ -f ${SYMLINK_PATH}/.env ]]; then
         COPYFROMPATH=${SYMLINK_PATH}
@@ -2072,25 +2073,25 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
 
     # copy the .env from the existing install over to the new path
     output "Copying existing config to new version"
-    cp ${COPYFROMPATH}/.env ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/.env
-    cp ${SYMLINK_PATH}/xapi/.env ${LOCAL_PATH}/xapi/.env
+    cp ${COPYFROMPATH}/.env ${LOCAL_PATH}/${WEBAPP_SUBDIR}/.env
+    cp ${SYMLINK_PATH}/${XAPI_SUBDIR}/.env ${LOCAL_PATH}/${XAPI_SUBDIR}/.env
 
     # copy the existing .git over
     if [[ -d ${COPYFROMPATH}/.git ]]; then
-        cp -R ${COPYFROMPATH}/.git ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/
+        cp -R ${COPYFROMPATH}/.git ${LOCAL_PATH}/${WEBAPP_SUBDIR}/
     fi
 
     # copy the pm2 files from existing install over
-    cp ${COPYFROMPATH}/all.json ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/all.json
-    cp ${SYMLINK_PATH}/xapi/xapi.json ${LOCAL_PATH}/xapi/xapi.json
+    cp ${COPYFROMPATH}/all.json ${LOCAL_PATH}/${WEBAPP_SUBDIR}/all.json
+    cp ${SYMLINK_PATH}/${XAPI_SUBDIR}/xapi.json ${LOCAL_PATH}/${XAPI_SUBDIR}/xapi.json
 
     # copy anything in the storage dirs over
     output "Copying user uploaded data in storage/ folders to new install....." true
-    cp -nR ${COPYFROMPATH}/storage/* ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/storage/
-    if [[ ! -d ${LOCAL_PATH}/xapi/storage ]]; then
-        mkdir -p ${LOCAL_PATH}/xapi/storage
+    cp -nR ${COPYFROMPATH}/storage/* ${LOCAL_PATH}/${WEBAPP_SUBDIR}/storage/
+    if [[ ! -d ${LOCAL_PATH}/${XAPI_SUBDIR}/storage ]]; then
+        mkdir -p ${LOCAL_PATH}/${XAPI_SUBDIR}/storage
     fi
-    cp -nR ${SYMLINK_PATH}/xapi/storage/* ${LOCAL_PATH}/xapi/storage/
+    cp -nR ${SYMLINK_PATH}/${XAPI_SUBDIR}/storage/* ${LOCAL_PATH}/${XAPI_SUBDIR}/storage/
     output "done!" false true
 
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
@@ -2142,8 +2143,8 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
         unlink $SYMLINK_PATH
         ln -s $LOCAL_PATH $SYMLINK_PATH
         echo "[LL] starting PM2 processes...."
-        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/${CHECKOUT_SUBDIR}; $PM2_PATH start all.json"
-        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/xapi; $PM2_PATH start xapi.json"
+        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}; $PM2_PATH start all.json"
+        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/${XAPI_SUBDIR}; $PM2_PATH start xapi.json"
         su - ${LOCAL_USER} -c "$PM2_PATH save"
         service pm2-${LOCAL_USER} restart
         echo "[LL] PM2 processes restarted"
@@ -2199,8 +2200,8 @@ echo "[LL] cleaning up temp directories"
 if [[ -d $TMPDIR ]]; then
     rm -R $TMPDIR
 fi
-if [[ -d ${BUILDDIR}/${CHECKOUT_SUBDIR} ]]; then
-    rm -R ${BUILDDIR}/${CHECKOUT_SUBDIR}
+if [[ -d ${BUILDDIR}/${WEBAPP_SUBDIR} ]]; then
+    rm -R ${BUILDDIR}/${WEBAPP_SUBDIR}
 fi
 
 
