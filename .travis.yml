@@ -17,7 +17,7 @@ before_install:
   - ${PWD}/mongodb-linux-x86_64-${MONGODB}/bin/mongod --dbpath ${PWD}/mongodb-linux-x86_64-${MONGODB}/data --logpath ${PWD}/mongodb-linux-x86_64-${MONGODB}/mongodb.log --fork
 
 install:
-  - sudo su -c "./llv2_build.sh -y 3"
+  - sudo su -c "export PATH=./node_modules/.bin:$PATH && ./llv2_build.sh -y 3"
 
 script:
   - ./tests/checkURL.sh -u localhost/data/xAPI/about
