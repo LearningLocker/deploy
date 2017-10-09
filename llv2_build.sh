@@ -33,51 +33,6 @@ function yum_package ()
 #########################################
 # GENERIC FUNCTIONS IRRESPECTIVE OF OS  #
 #########################################
-function checkCopyDir ()
-{
-    path=*
-    if [ $1 ]; then
-        path=$1/*
-    fi
-
-    if [[ $2 != "p" ]]; then
-        echo -n "[LL] copying files (may take some time)...."
-    fi
-    for D in $path; do
-        if [ -d "${D}" ]; then
-
-            # checks to make sure we don't copy unneccesary files
-            if [ $D == "node_modules" ]; then
-                :
-            elif [[ $D =~ .*/src$ ]]; then
-                :
-            #elif [ $D == "lib" ]; then
-            #    :
-            else
-                # actual copy process (recursively)
-                #echo "copying ${D}"
-                if [[ ! -d ${TMPDIR}/${D} ]]; then
-                    mkdir ${TMPDIR}/${D}
-                fi
-                # copy files
-                for F in $D/*; do
-                    if [ -f "${F}" ]; then
-                        cp ${F} ${TMPDIR}/${D}/
-                    fi
-                done
-
-                # go recursively into directories
-                checkCopyDir $D p
-            fi
-        elif [ -f "${D}" ]; then
-            cp $D ${TMPDIR}/${D}
-        fi
-    done
-    if [[ $2 != "p" ]]; then
-        echo "done"
-    fi
-}
-
 
 function determine_os_version ()
 {
@@ -1689,7 +1644,6 @@ output_log "copying ${BUILDDIR}/${XAPI_SUBDIR}/.env to $TMPDIR/${XAPI_SUBDIR}/"
 cp ${BUILDDIR}/${XAPI_SUBDIR}/.env $TMPDIR/${XAPI_SUBDIR}/
 
 # full copy of remaining files
-#checkCopyDir
 output "copying files (may take some time)...." true
 cp -Rp $BUILDDIR/* $TMPDIR/
 output "done!" false true
