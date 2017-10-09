@@ -655,6 +655,10 @@ function debian_install ()
 
 
     INSTALLED_NODE_VERSION=`node --version`
+    if [[ $INSTALLED_NODE_VERSION == "" ]]; then
+        output "ERROR :: node doesn't seem to be installed - exiting"
+        exit 1
+    fi
     output "node version - $INSTALLED_NODE_VERSION"
 
     if [[ ! `command -v yarn` ]]; then
@@ -859,6 +863,10 @@ function redhat_install ()
 
 
     INSTALLED_NODE_VERSION=`node --version`
+    if [[ $INSTALLED_NODE_VERSION == "" ]]; then
+        output "ERROR :: node doesn't seem to be installed - exiting"
+        exit 1
+    fi
     output "node version - $INSTALLED_NODE_VERSION"
 
     if [[ ! `command -v yarn` ]]; then
