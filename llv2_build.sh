@@ -105,7 +105,10 @@ function determine_os_version ()
         output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
     elif [[ $RAW_OS_VERSION == *"Ubuntu"* ]]; then
         OS_VERSION="Ubuntu"
-        OS_VNO=`lsb_release -a | grep Release | awk '{print $2}'`
+        OS_VNO=`lsb_release -a 2>/dev/null | grep Release | awk '{print $2}'`
+        if [[ $OS_VNO == "" ]]; then
+            OS_VNO=$(cat /etc/os-release | grep "VERSION_ID" | sed 's?VERSION_ID=??' | sed 's?"??g')
+        fi
         if [[ $OS_VNO == "14.04" ]]; then
             NODE_OVERRIDE="6.x"
             PM2_OVERRIDE="ubuntu14"
@@ -770,6 +773,7 @@ function debian_nginx ()
 
 function debian_mongo ()
 {
+    D_M_I=false
     if [[ $OS_VERSION == "Ubuntu" ]]; then
         if [[ $OS_VNO == "16.04" ]]; then
             output "Setting up mongo repo (Stock Ubuntu version is too old)"
@@ -783,8 +787,11 @@ function debian_mongo ()
             output "If this fails you will need to check how the Mongo service is setup for your system and manually start it"
             service mongod start
             systemctl enable mongod.service
+            D_M_I=true
         fi
-    else
+    fi
+
+    if [[ $D_M_I == false ]]; then
         output "installing mongodb...." true
         apt-get -y -qq install mongodb >> $OUTPUT_LOG 2>>$ERROR_LOG &
         print_spinner true
@@ -1601,6 +1608,11 @@ fi
 
 nvm_install
 
+# make sure dirs exist
+if [[ ! -d $BUILDDIR ]]; then
+    mkdir -p $BUILDDIR
+fi
+
 # base install & build
 output "Running install steps"
 cd $BUILDDIR
@@ -1611,7 +1623,15 @@ xapi_install
 
 # create tmp dir
 output "creating $TMPDIR"
-mkdir -p $TMPDIR
+if [[ ! -d $TMPDIR ]]; then
+    mkdir -p $TMPDIR
+fi
+if [[ ! -d ${TMPDIR}/${CHECKOUT_SUBDIR}/ ]]; then
+    mkdir -p ${TMPDIR}/${CHECKOUT_SUBDIR}
+fi
+if [[ ! -d ${TMPDIR}/xapi/ ]]; then
+    mkdir -p ${TMPDIR}/xapi
+fi
 
 # package.json
 output "copying modules...." true
@@ -1619,7 +1639,7 @@ if [[ ! -f ${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json ]]; then
     output "can't copy file '${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json ${TMPDIR}/${CHECKOUT_SUBDIR}
+cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/package.json ${TMPDIR}/${CHECKOUT_SUBDIR}/
 
 # pm2 loader
 if [[ ! -f ${BUILDDIR}/${CHECKOUT_SUBDIR}/pm2/all.json ]]; then
@@ -1647,7 +1667,7 @@ cp -R ${BUILDDIR}/${CHECKOUT_SUBDIR}/node_modules $TMPDIR/${CHECKOUT_SUBDIR}/ >>
 print_spinner true
 
 output_log "copying nginx.conf.example to $TMPDIR"
-cp nginx.conf.example $TMPDIR/${CHECKOUT_SUBDIR}/
+cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/nginx.conf.example $TMPDIR/${CHECKOUT_SUBDIR}/
 
 output_log "copying ${BUILDDIR}/${CHECKOUT_SUBDIR}/.git to $TMPDIR"
 cp -R ${BUILDDIR}/${CHECKOUT_SUBDIR}/.git $TMPDIR/${CHECKOUT_SUBDIR}/
@@ -1657,7 +1677,12 @@ cp ${BUILDDIR}/${CHECKOUT_SUBDIR}/.env $TMPDIR/${CHECKOUT_SUBDIR}/
 
 output_log "copying ${BUILDDIR}/xapi/.env to $TMPDIR/xapi/"
 cp ${BUILDDIR}/xapi/.env $TMPDIR/xapi/
-checkCopyDir
+
+# full copy of remaining files
+#checkCopyDir
+output "copying files (may take some time)...." true
+cp -Rp $BUILDDIR/* $TMPDIR/
+output "done!" false true
 
 
 DATESTRING=`date +%Y%m%d`
@@ -1855,7 +1880,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
 
 
-    output_log "reprocessing $TMPDIR/all.json"
+    output_log "reprocessing $TMPDIR/${CHECKOUT_SUBDIR}/all.json"
     reprocess_pm2 $TMPDIR/${CHECKOUT_SUBDIR}/all.json $SYMLINK_PATH $LOG_PATH $PID_PATH
     output_log "reprocessing $TMPDIR/xapi/xapi.json"
     reprocess_pm2 $TMPDIR/xapi/xapi.json ${SYMLINK_PATH}/xapi $LOG_PATH $PID_PATH
