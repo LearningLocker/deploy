@@ -313,7 +313,7 @@ function setup_init_script ()
 
 
     output "starting base processes...." true
-    su - $2 -c "cd $1; pm2 start all.json"
+    su - $2 -c "cd ${1}/${CHECKOUT_SUBDIR}; pm2 start all.json"
     output "done" true true
 
     output "starting xapi process...." true
@@ -1881,7 +1881,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
 
     output_log "reprocessing $TMPDIR/${CHECKOUT_SUBDIR}/all.json"
-    reprocess_pm2 $TMPDIR/${CHECKOUT_SUBDIR}/all.json $SYMLINK_PATH $LOG_PATH $PID_PATH
+    reprocess_pm2 $TMPDIR/${CHECKOUT_SUBDIR}/all.json $SYMLINK_PATH/${CHECKOUT_SUBDIR} $LOG_PATH $PID_PATH
     output_log "reprocessing $TMPDIR/xapi/xapi.json"
     reprocess_pm2 $TMPDIR/xapi/xapi.json ${SYMLINK_PATH}/xapi $LOG_PATH $PID_PATH
 
@@ -2063,21 +2063,21 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
 
     # copy the .env from the existing install over to the new path
     output "Copying existing config to new version"
-    cp ${SYMLINK_PATH}/.env ${LOCAL_PATH}/.env
+    cp ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/.env ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/.env
     cp ${SYMLINK_PATH}/xapi/.env ${LOCAL_PATH}/xapi/.env
 
     # copy the existing .git over
-    if [[ -d ${SYMLINK_PATH}/.git ]]; then
-        cp -R ${SYMLINK_PATH}/.git ${LOCAL_PATH}/
+    if [[ -d ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/.git ]]; then
+        cp -R ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/.git ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/
     fi
 
     # copy the pm2 files from existing install over
-    cp ${SYMLINK_PATH}/all.json ${LOCAL_PATH}/all.json
+    cp ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/all.json ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/all.json
     cp ${SYMLINK_PATH}/xapi/xapi.json ${LOCAL_PATH}/xapi/xapi.json
 
     # copy anything in the storage dirs over
     output "Copying user uploaded data in storage/ folders to new install....." true
-    cp -nR ${SYMLINK_PATH}/storage/* ${LOCAL_PATH}/storage/
+    cp -nR ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/storage/* ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/storage/
     if [[ ! -d ${LOCAL_PATH}/xapi/storage ]]; then
         mkdir -p ${LOCAL_PATH}/xapi/storage
     fi
@@ -2128,7 +2128,7 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
         unlink $SYMLINK_PATH
         ln -s $LOCAL_PATH $SYMLINK_PATH
         echo "[LL] starting PM2 processes...."
-        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}; $PM2_PATH start all.json"
+        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/${CHECKOUT_SUBDIR}; $PM2_PATH start all.json"
         su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/xapi; $PM2_PATH start xapi.json"
         su - ${LOCAL_USER} -c "$PM2_PATH save"
         service pm2-${LOCAL_USER} restart
@@ -2190,7 +2190,7 @@ if [[ -d ${BUILDDIR}/${CHECKOUT_SUBDIR} ]]; then
 fi
 
 
-if [[ $AUTOSETUPUSER == true ]]; then
+if [[ $AUTOSETUPUSER == true ]] && [[ $UPDATE_MODE == false ]]; then
     echo
     output "Auto-setup an account with following details:"
     output " email    : $INSTALL_EMAIL"
@@ -2200,7 +2200,7 @@ if [[ $AUTOSETUPUSER == true ]]; then
     echo
 fi
 
-if [[ $WRITE_AUTOSETUP == true ]]; then
+if [[ $WRITE_AUTOSETUP == true ]] && [[ $UPDATE_MODE == false ]]; then
     output_file=/home/ubuntu/ll_credentials.txt
     echo "email    : $INSTALL_EMAIL" > $output_file
     echo "org      : $INSTALL_ORG" >> $output_file
