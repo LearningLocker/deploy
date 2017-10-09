@@ -385,7 +385,7 @@ function base_install ()
     DO_BASE_INSTALL=true
     if [[ -d ${CHECKOUT_SUBDIR} ]]; then
         while true; do
-            output "Temp directory already exists for checkout - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
+            output "Temp directory already exists for checkout - should I delete? [y|n] (enter is the default of ${DEFAULT_RM_TMP})"
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
                 rm -R ${CHECKOUT_SUBDIR}
@@ -495,7 +495,7 @@ function xapi_install ()
     if [[ -d xapi ]]; then
         DEFAULT_RM_TMP="y"
         while true; do
-            output "Tmp directory already exists for checkout of xapi - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
+            output "Tmp directory already exists for checkout of xapi - should I delete? [y|n] (enter is the default of ${DEFAULT_RM_TMP})"
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
                 rm -R xapi
@@ -557,7 +557,7 @@ function xapi_install ()
 function nvm_install ()
 {
     if [[ -d ~/.nvm ]]; then
-        output "nvm is already installed. Do you want to check for an update ? [y|n] (Press enter for a default of 'y')"
+        output "nvm is already installed. Do you want to check for an update? [y|n] (Press enter for a default of 'y')"
         while true; do
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
@@ -1221,14 +1221,14 @@ done
 #################################################################################
 if [[ $GIT_ASK == true ]]; then
     while true; do
-        output "What branch do you want to install ? Press 'enter' for the default of ${GIT_BRANCH}"
+        output "What branch do you want to install? Press 'enter' for the default of ${GIT_BRANCH}"
         read -r n
         if [[ $n == "" ]]; then
             output_log "user didn't select a branch"
             break
         else
             while true; do
-                output "are you sure the branch '${n}' is correct ? [y|n] (press enter for the default of 'y')"
+                output "are you sure the branch '${n}' is correct? [y|n] (press enter for the default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
@@ -1246,7 +1246,7 @@ if [[ $GIT_ASK == true ]]; then
 fi
 
 while true; do
-    #echo "[LL] Do you want to install this locally(l) or create a package(p) ? [l|p] (enter for default of '${DEFAULT_INSTALL_TYPE}'"
+    #echo "[LL] Do you want to install this locally(l) or create a package(p)? [l|p] (enter for default of '${DEFAULT_INSTALL_TYPE}'"
     #read -r -s -n 1 n
     n="l"
     if [[ $n == "" ]]; then
@@ -1352,7 +1352,7 @@ while true; do
         output "     the nginx config points at. This is so that roll-backs can be done easier and we can perform a complete install before finally" false true
         output "     switching the nginx config over which'll minimise downtime on upgrades" false true
         while true; do
-            output "What base directory do you want to install to ? (Press 'enter' for the default of $DEFAULT_LOCAL_RELEASE_PATH)"
+            output "What base directory do you want to install to? (Press 'enter' for the default of $DEFAULT_LOCAL_RELEASE_PATH)"
             read -r p
             if [[ $p == "" ]]; then
                 p=$DEFAULT_LOCAL_RELEASE_PATH
@@ -1360,7 +1360,7 @@ while true; do
             output_log "attempting to use base path of: $DEFAULT_LOCAL_RELEASE_PATH"
             if [[ ! -d $p ]]; then
                 while true; do
-                    output "Directory '${p}' doesn't exist - should we create it ? [y|n] (Press enter for default of 'y')"
+                    output "Directory '${p}' doesn't exist - should we create it? [y|n] (Press enter for default of 'y')"
                     read -r -s -n 1 c
                     if [[ $c == "" ]] || [[ $c == "y" ]]; then
                         output_log "user opted to proceed"
@@ -1384,7 +1384,7 @@ while true; do
 
         # check where to symlink to
         while true; do
-            output "What path should the release be symlinked to ? (Press enter for the default of $DEFAULT_SYMLINK_PATH)"
+            output "What path should the release be symlinked to? (Press enter for the default of $DEFAULT_SYMLINK_PATH)"
             read -r p
             if [[ $p == "" ]]; then
                 p=$DEFAULT_SYMLINK_PATH
@@ -1396,7 +1396,7 @@ while true; do
                 exit 0
             elif [[ -L $SYMLINK_PATH ]]; then
                 # symlink exists, go into update mode
-                output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
+                output "It looks like this symlink already exists - do you want to upgrade an existing install? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
                 while true; do
                     read -r -s -n 1 c
                     if [[ $c == "e" ]]; then
@@ -1410,7 +1410,7 @@ while true; do
                         break 2
                     elif [[ $c == n ]]; then
                         while true; do
-                            output "Ok, do you want to continue to install anyway ? If you select yes then we'll unlink/delete things as needed [y|n] (Press enter for the default of 'y')"
+                            output "Ok, do you want to continue to install anyway? If you select yes then we'll unlink/delete things as needed [y|n] (Press enter for the default of 'y')"
                             read -r -s -n 1 b
                             if [[ $b == "y" ]] || [[ $b == "" ]]; then
                                 output "Ok, continuing on - you won't be prompted for any overrides"
@@ -1431,7 +1431,7 @@ while true; do
 
         # determine user to install under
         while true; do
-            output "I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
+            output "I need a user to install the code under - what user would you like me to use? (press enter for the default of '$DEFAULT_USER')"
             read -r u
             if [[ $u == "" ]]; then
                 u=$DEFAULT_USER
@@ -1456,7 +1456,7 @@ while true; do
                 done
             else
                 while true; do
-                    output "User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
+                    output "User '$u' doesn't exist - do you want me to create them? [y|n] (enter for default of 'y')"
                     read -r -s -n 1 c
                     if [[ $c == "" ]]; then
                         c="y"
@@ -1498,7 +1498,7 @@ while true; do
             fi
         else
             while true; do
-                output "MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+                output "MongoDB isn't installed - do you want to install it? [y|n] (press 'enter' for default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
@@ -1532,7 +1532,7 @@ while true; do
             fi
         else
             while true; do
-                output "Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+                output "Redis isn't installed - do you want to install it? [y|n] (press 'enter' for default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
@@ -1745,7 +1745,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                             output "BYPASS - installing mongo even without redis present"
                             break
                         fi
-                        output "As redis isn't going to be installed locally, do you still want to install MongoDB ? [y|n] (press enter for the default of 'y')"
+                        output "As redis isn't going to be installed locally, do you still want to install MongoDB? [y|n] (press enter for the default of 'y')"
                         read -s -r -n 1 n
                         output_log "user entered '${n}'"
                         if [[ $n == "n" ]]; then
@@ -1915,7 +1915,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ]; then
         RUN_INSTALL_CMD=false
-        output "do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
+        output "do you want to set up the organisation now to complete the installation? [y|n] (press enter for the default of 'y')"
         while true; do
             if [[ $AUTOSETUPUSER == true ]]; then
                 output "Automatic setup detected"
@@ -1982,7 +1982,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 done
                 while true; do
                     echo
-                    output "Is the following information correct ?"
+                    output "Is the following information correct?"
                     output "  Organisation  : $INSTALL_ORG"
                     output "  Email address : $INSTALL_EMAIL"
                     output "[y|n]"
@@ -2061,23 +2061,32 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     mkdir -p $LOCAL_PATH
     cp -R $TMPDIR/* $LOCAL_PATH/
 
+    # block to determine directory format as it's changed/changing
+    COPYFROMPATH=${SYMLINK_PATH}/${CHECKOUT_SUBDIR}
+    FORCEFULLRESTART=false
+    if [[ -f ${SYMLINK_PATH}/.env ]]; then
+        COPYFROMPATH=${SYMLINK_PATH}
+        FORCEFULLRESTART=true
+    fi
+
+
     # copy the .env from the existing install over to the new path
     output "Copying existing config to new version"
-    cp ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/.env ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/.env
+    cp ${COPYFROMPATH}/.env ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/.env
     cp ${SYMLINK_PATH}/xapi/.env ${LOCAL_PATH}/xapi/.env
 
     # copy the existing .git over
-    if [[ -d ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/.git ]]; then
-        cp -R ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/.git ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/
+    if [[ -d ${COPYFROMPATH}/.git ]]; then
+        cp -R ${COPYFROMPATH}/.git ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/
     fi
 
     # copy the pm2 files from existing install over
-    cp ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/all.json ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/all.json
+    cp ${COPYFROMPATH}/all.json ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/all.json
     cp ${SYMLINK_PATH}/xapi/xapi.json ${LOCAL_PATH}/xapi/xapi.json
 
     # copy anything in the storage dirs over
     output "Copying user uploaded data in storage/ folders to new install....." true
-    cp -nR ${SYMLINK_PATH}/${CHECKOUT_SUBDIR}/storage/* ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/storage/
+    cp -nR ${COPYFROMPATH}/storage/* ${LOCAL_PATH}/${CHECKOUT_SUBDIR}/storage/
     if [[ ! -d ${LOCAL_PATH}/xapi/storage ]]; then
         mkdir -p ${LOCAL_PATH}/xapi/storage
     fi
@@ -2100,6 +2109,11 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     while true; do
         if [[ $JUSTDOIT == true ]]; then
             output "defaulting to full restart on update"
+            UPDATE_RESTART=true
+            break
+        fi
+        if [[ $FORCEFULLRESTART == true ]]; then
+            output "Forcing full restart due to change in directory structure on update"
             UPDATE_RESTART=true
             break
         fi
