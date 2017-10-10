@@ -508,35 +508,6 @@ function xapi_install ()
 }
 
 
-
-function nvm_install ()
-{
-    if [[ -d ~/.nvm ]]; then
-        output "nvm is already installed. Do you want to check for an update? [y|n] (Press enter for a default of 'y')"
-        while true; do
-            if [[ $JUSTDOIT == true ]]; then
-                output "bypass defaulting to 'y'"
-                break
-            fi
-            read -r -s -n 1 c
-            output_log "user entered '${c}'"
-            if [[ $c == "" ]] || [[ $c == "y" ]]; then
-                output_log "will check NVM"
-                break
-            elif [[ $c == "n" ]]; then
-                output_log "not checking NVM"
-                return
-            fi
-        done
-    fi
-
-    output "running nvm install/update process...." true
-    wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash >> $OUTPUT_LOG 2>>$ERROR_LOG &
-    print_spinner true
-    sleep 5
-}
-
-
 # $1 is the file to reprocess
 # $2 is the path to the install dir
 # $3 is the log path - if not passed in we'll assume it's $2/logs/
@@ -1583,8 +1554,6 @@ elif [[ $OS_VERSION == "Redhat" ]]; then
 fi
 
 
-#nvm_install
-
 # make sure dirs exist
 if [[ ! -d $BUILDDIR ]]; then
     mkdir -p $BUILDDIR
@@ -2213,6 +2182,10 @@ if [[ $SETUP_AMI == true ]]; then
     fi
     if [[ ! -d /etc/learninglocker ]]; then
         mkdir -p /etc/learninglocker
+    fi
+    if [[ ! -f /var/log/learninglocker/user_setup.log ]]; then
+        touch /var/log/learninglocker/user_setup.log
+        chown ubuntu:ubuntu /var/log/learninglocker/user_setup.log
     fi
     # git clone
     git clone https://github.com/LearningLocker/deploy deploy
