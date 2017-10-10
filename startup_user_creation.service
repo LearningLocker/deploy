@@ -3,7 +3,7 @@ Description=Learning Locker startup check
 After=network.target
 
 [Service]
-User=learninglocker
+User=ubuntu
 ExecStart=/usr/sbin/ll_startup_user_creation.sh
 ExecStop=
 

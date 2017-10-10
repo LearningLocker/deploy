@@ -9,7 +9,7 @@ INSTALL_ORG="testOrg"
 CRED_FILE=/home/ubuntu/ll_credentials.txt
 LOCAL_PATH=/usr/local/learninglocker/current
 INSTALL_PATH_FILE=/etc/learninglocker/install_path
-INSTALL_LOG=/var/log/learninglocker/install.log
+INSTALL_LOG=/var/log/learninglocker/user_setup.log
 
 if [[ ! -d /home/ubuntu ]]; then
     CRED_FILE=/usr/local/learninglocker/ll_credentials.txt
@@ -30,13 +30,14 @@ else
     INSTALL_PASSWD="ChangeMeN0w"
 fi
 
-
-CHK=$(cd $LOCAL_PATH/webapp; node cli/dist/server createSiteAdmin "$INSTALL_EMAIL" "$INSTALL_ORG" "$INSTALL_PASSWD" 2>/dev/null | grep "User not found")
+CHK=$(cd $LOCAL_PATH/webapp; node cli/dist/server createSiteAdmin "$INSTALL_EMAIL" "$INSTALL_ORG" "$INSTALL_PASSWD" 2>>$INSTALL_LOG | grep "User not found")
 
 if [[ $CHK != "" ]]; then
+    echo "[UC] $CHK" >> $INSTALL_LOG
     echo "[UC] creating user $INSTALL_EMAIL" >> $INSTALL_LOG
     if [[ ! -f $CRED_FILE ]]; then
-        touch $CRED_FILE
+        echo "[UC] creating credential file $CRED_FILE" >> $INSTALL_LOG
+        touch $CRED_FILE 2>>$INSTALL_LOG
     fi
     echo "Created user. Writing details to $CRED_FILE"
     echo "email    : $INSTALL_EMAIL" > $CRED_FILE
