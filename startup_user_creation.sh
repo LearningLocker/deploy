@@ -23,7 +23,7 @@ fi
 
 # generate password
 if [[ `command -v pwgen` ]]; then
-    INSTALL_PASSWD=`pwgen 8 1`
+    INSTALL_PASSWD=`pwgen 12 1`
 elif [[ `command -v pwmake` ]]; then
     INSTALL_PASSWD=`pwmake 64`
 else
