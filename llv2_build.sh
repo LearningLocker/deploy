@@ -2207,11 +2207,17 @@ fi
 if [[ $SETUP_AMI == true ]]; then
     output "Cloning out deploy git repo to tmp to seed AMI building"
     cd /tmp
+    # check required dirs
     if [[ -d /tmp/deploy ]]; then
         rm -R /tmp/deploy
     fi
+    if [[ ! -d /etc/learninglocker ]]; then
+        mkdir -p /etc/learninglocker
+    fi
+    # git clone
     git clone https://github.com/LearningLocker/deploy deploy
     cd deploy
+    # write install path
     output "setting the install path in to /etc/learninglocker"
     echo $SYMLINK_PATH > /etc/learninglocker/install_path
     output "setting up user creation script"
@@ -2222,6 +2228,7 @@ if [[ $SETUP_AMI == true ]]; then
     output "setting up user creation service"
     cp startup_user_creation.service /lib/systemd/system/ll_startup_user_creation.service
     systemctl enable ll_startup_user_creation.service
+    # final output
     output "done"
     echo
     output "if you want to now create an AMI you will need to run:"

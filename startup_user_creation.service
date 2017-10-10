@@ -1,9 +1,11 @@
 [Unit]
 Description=Learning Locker startup check
-After=pm2-learninglocker
+After=network.target
 
 [Service]
-ExecStart=sudo /usr/sbin/ll_startup_user_creation.sh
+User=learninglocker
+ExecStart=/usr/sbin/ll_startup_user_creation.sh
+ExecStop=
 
 [Install]
 WantedBy=multi-user.target
