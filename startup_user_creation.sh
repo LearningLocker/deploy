@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # slight dodgy hack to make sure everything has started up
-sleep 300
+sleep 180
 
 # defaults
 INSTALL_EMAIL="ht2testadmin@ht2labs.com"
