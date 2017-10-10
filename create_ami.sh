@@ -39,7 +39,7 @@ BUCKET_PREFIX=
 VISIBILITY="private"
 OUTPUT_LOG=/tmp/ami_build.log
 ERROR_LOG=$OUTPUT_LOG
-INSTANCE_TYPE="instance"
+INSTANCE_TYPE="ebs"
 
 
 #########################################################################################################
@@ -308,7 +308,7 @@ if [[ $OS_VERSION == "Ubuntu" ]]; then
     #print_spinner true
 
     echo -n "[*] installing required software...."
-    apt-get -y install ec2-ami-tools >>$OUTPUT_LOG 2>>$ERROR_LOG &
+    apt-get -y install ec2-ami-tools pwgen >>$OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 else
     echo "[*] unsupported OS - exiting"
