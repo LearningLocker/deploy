@@ -9,6 +9,7 @@ INSTALL_ORG="testOrg"
 CRED_FILE=/home/ubuntu/ll_credentials.txt
 LOCAL_PATH=/usr/local/learninglocker/current
 INSTALL_PATH_FILE=/etc/learninglocker/install_path
+INSTALL_LOG=/var/log/learninglocker/install.log
 
 if [[ ! -d /home/ubuntu ]]; then
     CRED_FILE=/usr/local/learninglocker/ll_credentials.txt
@@ -33,6 +34,7 @@ fi
 CHK=$(cd $LOCAL_PATH/webapp; node cli/dist/server createSiteAdmin "$INSTALL_EMAIL" "$INSTALL_ORG" "$INSTALL_PASSWD" 2>/dev/null | grep "User not found")
 
 if [[ $CHK != "" ]]; then
+    echo "[UC] creating user $INSTALL_EMAIL" >> $INSTALL_LOG
     if [[ ! -f $CRED_FILE ]]; then
         touch $CRED_FILE
     fi
@@ -40,4 +42,6 @@ if [[ $CHK != "" ]]; then
     echo "email    : $INSTALL_EMAIL" > $CRED_FILE
     echo "org      : $INSTALL_ORG" >> $CRED_FILE
     echo "password : $INSTALL_PASSWD" >> $CRED_FILE
+else
+    echo "[UC] User $INSTALL_EMAIL already exists, not creating" >> $INSTALL_LOG
 fi
