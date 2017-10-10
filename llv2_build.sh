@@ -33,51 +33,6 @@ function yum_package ()
 #########################################
 # GENERIC FUNCTIONS IRRESPECTIVE OF OS  #
 #########################################
-function checkCopyDir ()
-{
-    path=*
-    if [ $1 ]; then
-        path=$1/*
-    fi
-
-    if [[ $2 != "p" ]]; then
-        echo -n "[LL] copying files (may take some time)...."
-    fi
-    for D in $path; do
-        if [ -d "${D}" ]; then
-
-            # checks to make sure we don't copy unneccesary files
-            if [ $D == "node_modules" ]; then
-                :
-            elif [[ $D =~ .*/src$ ]]; then
-                :
-            #elif [ $D == "lib" ]; then
-            #    :
-            else
-                # actual copy process (recursively)
-                #echo "copying ${D}"
-                if [[ ! -d ${TMPDIR}/${D} ]]; then
-                    mkdir ${TMPDIR}/${D}
-                fi
-                # copy files
-                for F in $D/*; do
-                    if [ -f "${F}" ]; then
-                        cp ${F} ${TMPDIR}/${D}/
-                    fi
-                done
-
-                # go recursively into directories
-                checkCopyDir $D p
-            fi
-        elif [ -f "${D}" ]; then
-            cp $D ${TMPDIR}/${D}
-        fi
-    done
-    if [[ $2 != "p" ]]; then
-        echo "done"
-    fi
-}
-
 
 function determine_os_version ()
 {
@@ -105,7 +60,10 @@ function determine_os_version ()
         output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
     elif [[ $RAW_OS_VERSION == *"Ubuntu"* ]]; then
         OS_VERSION="Ubuntu"
-        OS_VNO=`lsb_release -a | grep Release | awk '{print $2}'`
+        OS_VNO=`lsb_release -a 2>/dev/null | grep Release | awk '{print $2}'`
+        if [[ $OS_VNO == "" ]]; then
+            OS_VNO=$(cat /etc/os-release | grep "VERSION_ID" | sed 's?VERSION_ID=??' | sed 's?"??g')
+        fi
         if [[ $OS_VNO == "14.04" ]]; then
             NODE_OVERRIDE="6.x"
             PM2_OVERRIDE="ubuntu14"
@@ -310,11 +268,11 @@ function setup_init_script ()
 
 
     output "starting base processes...." true
-    su - $2 -c "cd $1; pm2 start all.json"
+    su - $2 -c "cd ${1}/${WEBAPP_SUBDIR}; pm2 start all.json"
     output "done" true true
 
     output "starting xapi process...." true
-    su - $2 -c "cd ${1}/xapi; pm2 start xapi.json"
+    su - $2 -c "cd ${1}/${XAPI_SUBDIR}; pm2 start xapi.json"
     output "done" true true
 
     su - $2 -c "pm2 save"
@@ -380,12 +338,12 @@ function base_install ()
     # if the checkout dir exists, prompt the user for what to do
     DEFAULT_RM_TMP=y
     DO_BASE_INSTALL=true
-    if [[ -d learninglocker_node ]]; then
+    if [[ -d ${WEBAPP_SUBDIR} ]]; then
         while true; do
-            output "Temp directory already exists for checkout - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
+            output "Temp directory already exists for checkout - should I delete? [y|n] (enter is the default of ${DEFAULT_RM_TMP})"
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
-                rm -R learninglocker_node
+                rm -R ${WEBAPP_SUBDIR}
                 break
             fi
             read -r -s -n 1 n
@@ -394,7 +352,7 @@ function base_install ()
             fi
             if [[ $n == "y" ]]; then
                 output "Ok, deleting temp directory...." true
-                rm -R learninglocker_node
+                rm -R ${WEBAPP_SUBDIR}
                 output "done!" false true
                 break
             elif [[ $n == "n" ]]; then
@@ -430,15 +388,15 @@ function base_install ()
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
             output_log "running git clone"
-            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker learninglocker_node
-            if [[ -d learninglocker_node ]]; then
-                output_log "no learninglocker_node dir after git - problem"
+            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker ${WEBAPP_SUBDIR}
+            if [[ -d ${WEBAPP_SUBDIR} ]]; then
+                output_log "no ${WEBAPP_SUBDIR} dir after git - problem"
                 break
             fi
         done
     fi
 
-    cd learninglocker_node
+    cd ${WEBAPP_SUBDIR}
     GIT_REV=`git rev-parse --verify HEAD`
     if [[ ! -f .env ]]; then
         cp .env.example .env
@@ -492,10 +450,10 @@ function xapi_install ()
     if [[ -d xapi ]]; then
         DEFAULT_RM_TMP="y"
         while true; do
-            output "Tmp directory already exists for checkout of xapi - delete [y|n] ? (enter is the default of ${DEFAULT_RM_TMP})"
+            output "Tmp directory already exists for checkout of xapi - should I delete? [y|n] (enter is the default of ${DEFAULT_RM_TMP})"
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
-                rm -R xapi
+                rm -R ${XAPI_SUBDIR}
                 break
             fi
             read n
@@ -504,7 +462,7 @@ function xapi_install ()
                 n=$DEFAULT_RM_TMP
             fi
             if [[ $n == "y" ]]; then
-                rm -R xapi
+                rm -R ${XAPI_SUBDIR}
                 break
             elif [[ $n == "n" ]]; then
                 output "ok, not removing it - could cause weirdness though so be warned"
@@ -519,15 +477,15 @@ function xapi_install ()
     if [[ $DO_XAPI_CHECKOUT -eq true ]]; then
         while true; do
             output_log "attempting git clone for xapi"
-            git clone -q https://github.com/LearningLocker/xapi-service.git xapi
-            if [[ -d xapi ]]; then
+            git clone -q https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
+            if [[ -d ${XAPI_SUBDIR} ]]; then
                 output_log "git clone appears to have failed"
                 break
             fi
         done
     fi
 
-    cd xapi/
+    cd ${XAPI_SUBDIR}/
 
     # sort out .env
     if [[ ! -f .env ]]; then
@@ -554,7 +512,7 @@ function xapi_install ()
 function nvm_install ()
 {
     if [[ -d ~/.nvm ]]; then
-        output "nvm is already installed. Do you want to check for an update ? [y|n] (Press enter for a default of 'y')"
+        output "nvm is already installed. Do you want to check for an update? [y|n] (Press enter for a default of 'y')"
         while true; do
             if [[ $JUSTDOIT == true ]]; then
                 output "bypass defaulting to 'y'"
@@ -575,6 +533,7 @@ function nvm_install ()
     output "running nvm install/update process...." true
     wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
+    sleep 5
 }
 
 
@@ -694,6 +653,14 @@ function debian_install ()
         output "Node.js already installed"
     fi
 
+
+    INSTALLED_NODE_VERSION=`node --version`
+    if [[ $INSTALLED_NODE_VERSION == "" ]]; then
+        output "ERROR :: node doesn't seem to be installed - exiting"
+        exit 1
+    fi
+    output "node version - $INSTALLED_NODE_VERSION"
+
     if [[ ! `command -v yarn` ]]; then
         curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - >> $OUTPUT_LOG 2>>$ERROR_LOG
         echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
@@ -756,8 +723,8 @@ function debian_nginx ()
 
 
     NGINX_CONFIG=/etc/nginx/sites-available/learninglocker.conf
-    XAPI_ENV=${PWD}/xapi/.env
-    BASE_ENV=${PWD}/.env
+    XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
+    BASE_ENV=${PWD}/${WEBAPP_SUBDIR}/.env
     rm /etc/nginx/sites-enabled/*
     mv ${1}/nginx.conf.example $NGINX_CONFIG
     ln -s $NGINX_CONFIG /etc/nginx/sites-enabled/learninglocker.conf
@@ -770,6 +737,7 @@ function debian_nginx ()
 
 function debian_mongo ()
 {
+    D_M_I=false
     if [[ $OS_VERSION == "Ubuntu" ]]; then
         if [[ $OS_VNO == "16.04" ]]; then
             output "Setting up mongo repo (Stock Ubuntu version is too old)"
@@ -783,8 +751,11 @@ function debian_mongo ()
             output "If this fails you will need to check how the Mongo service is setup for your system and manually start it"
             service mongod start
             systemctl enable mongod.service
+            D_M_I=true
         fi
-    else
+    fi
+
+    if [[ $D_M_I == false ]]; then
         output "installing mongodb...." true
         apt-get -y -qq install mongodb >> $OUTPUT_LOG 2>>$ERROR_LOG &
         print_spinner true
@@ -890,6 +861,14 @@ function redhat_install ()
         output "Node.js already installed"
     fi
 
+
+    INSTALLED_NODE_VERSION=`node --version`
+    if [[ $INSTALLED_NODE_VERSION == "" ]]; then
+        output "ERROR :: node doesn't seem to be installed - exiting"
+        exit 1
+    fi
+    output "node version - $INSTALLED_NODE_VERSION"
+
     if [[ ! `command -v yarn` ]]; then
         output "setting up yarn repo...." true
         wget https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo >> $OUTPUT_LOG 2>>$ERROR_LOG &
@@ -959,8 +938,8 @@ function redhat_nginx ()
 
 
     NGINX_CONFIG=/etc/nginx/conf.d/learninglocker.conf
-    XAPI_ENV=${PWD}/xapi/.env
-    BASE_ENV=${PWD}/.env
+    XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
+    BASE_ENV=${PWD}/${WEBAPP_SUBDIR}/.env
     mv ${1}/nginx.conf.example $NGINX_CONFIG
     # sub in variables from the .envs to the nginx config
     setup_nginx_config $NGINX_CONFIG $BASE_ENV $XAPI_ENV $2
@@ -1101,7 +1080,7 @@ TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
-BUILDDIR=$_TD
+BUILDDIR="${_TD}/learninglocker"
 MONGO_INSTALLED=false
 REDIS_INSTALLED=false
 PM2_OVERRIDE=false
@@ -1117,6 +1096,8 @@ LOG_PATH=/var/log/learninglocker
 OUTPUT_LOG=${LOG_PATH}/install.log
 CLAM_INSTALL=false
 CLAM_PATH=false
+WEBAPP_SUBDIR="webapp"
+XAPI_SUBDIR="xapi"
 ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
@@ -1134,9 +1115,9 @@ if [ -d $TMPDIR ]; then
     rm -R $TMPDIR
 fi
 
-if [ -d "${BUILDDIR}learninglocker_node" ]; then
+if [ -d "${BUILDDIR}" ]; then
     echo "clearing old tmp dir"
-    rm -R ${BUILDDIR}learninglocker_node
+    rm -R ${BUILDDIR}
 fi
 
 if [ -d $TMPDIR ]; then
@@ -1213,14 +1194,14 @@ done
 #################################################################################
 if [[ $GIT_ASK == true ]]; then
     while true; do
-        output "What branch do you want to install ? Press 'enter' for the default of ${GIT_BRANCH}"
+        output "What branch do you want to install? Press 'enter' for the default of ${GIT_BRANCH}"
         read -r n
         if [[ $n == "" ]]; then
             output_log "user didn't select a branch"
             break
         else
             while true; do
-                output "are you sure the branch '${n}' is correct ? [y|n] (press enter for the default of 'y')"
+                output "are you sure the branch '${n}' is correct? [y|n] (press enter for the default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
@@ -1238,7 +1219,7 @@ if [[ $GIT_ASK == true ]]; then
 fi
 
 while true; do
-    #echo "[LL] Do you want to install this locally(l) or create a package(p) ? [l|p] (enter for default of '${DEFAULT_INSTALL_TYPE}'"
+    #echo "[LL] Do you want to install this locally(l) or create a package(p)? [l|p] (enter for default of '${DEFAULT_INSTALL_TYPE}'"
     #read -r -s -n 1 n
     n="l"
     if [[ $n == "" ]]; then
@@ -1344,7 +1325,7 @@ while true; do
         output "     the nginx config points at. This is so that roll-backs can be done easier and we can perform a complete install before finally" false true
         output "     switching the nginx config over which'll minimise downtime on upgrades" false true
         while true; do
-            output "What base directory do you want to install to ? (Press 'enter' for the default of $DEFAULT_LOCAL_RELEASE_PATH)"
+            output "What base directory do you want to install to? (Press 'enter' for the default of $DEFAULT_LOCAL_RELEASE_PATH)"
             read -r p
             if [[ $p == "" ]]; then
                 p=$DEFAULT_LOCAL_RELEASE_PATH
@@ -1352,7 +1333,7 @@ while true; do
             output_log "attempting to use base path of: $DEFAULT_LOCAL_RELEASE_PATH"
             if [[ ! -d $p ]]; then
                 while true; do
-                    output "Directory '${p}' doesn't exist - should we create it ? [y|n] (Press enter for default of 'y')"
+                    output "Directory '${p}' doesn't exist - should we create it? [y|n] (Press enter for default of 'y')"
                     read -r -s -n 1 c
                     if [[ $c == "" ]] || [[ $c == "y" ]]; then
                         output_log "user opted to proceed"
@@ -1376,7 +1357,7 @@ while true; do
 
         # check where to symlink to
         while true; do
-            output "What path should the release be symlinked to ? (Press enter for the default of $DEFAULT_SYMLINK_PATH)"
+            output "What path should the release be symlinked to? (Press enter for the default of $DEFAULT_SYMLINK_PATH)"
             read -r p
             if [[ $p == "" ]]; then
                 p=$DEFAULT_SYMLINK_PATH
@@ -1388,7 +1369,7 @@ while true; do
                 exit 0
             elif [[ -L $SYMLINK_PATH ]]; then
                 # symlink exists, go into update mode
-                output "It looks like this symlink already exists - do you want to upgrade an existing install ? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
+                output "It looks like this symlink already exists - do you want to upgrade an existing install? [y|n|e] (Press enter for the default of 'y', 'n' to install regardless ignoring the prior release or 'e' to exit)"
                 while true; do
                     read -r -s -n 1 c
                     if [[ $c == "e" ]]; then
@@ -1402,7 +1383,7 @@ while true; do
                         break 2
                     elif [[ $c == n ]]; then
                         while true; do
-                            output "Ok, do you want to continue to install anyway ? If you select yes then we'll unlink/delete things as needed [y|n] (Press enter for the default of 'y')"
+                            output "Ok, do you want to continue to install anyway? If you select yes then we'll unlink/delete things as needed [y|n] (Press enter for the default of 'y')"
                             read -r -s -n 1 b
                             if [[ $b == "y" ]] || [[ $b == "" ]]; then
                                 output "Ok, continuing on - you won't be prompted for any overrides"
@@ -1423,7 +1404,7 @@ while true; do
 
         # determine user to install under
         while true; do
-            output "I need a user to install the code under - what user would you like me to use ? (press enter for the default of '$DEFAULT_USER')"
+            output "I need a user to install the code under - what user would you like me to use? (press enter for the default of '$DEFAULT_USER')"
             read -r u
             if [[ $u == "" ]]; then
                 u=$DEFAULT_USER
@@ -1448,7 +1429,7 @@ while true; do
                 done
             else
                 while true; do
-                    output "User '$u' doesn't exist - do you want me to create them ? [y|n] (enter for default of 'y')"
+                    output "User '$u' doesn't exist - do you want me to create them? [y|n] (enter for default of 'y')"
                     read -r -s -n 1 c
                     if [[ $c == "" ]]; then
                         c="y"
@@ -1490,7 +1471,7 @@ while true; do
             fi
         else
             while true; do
-                output "MongoDB isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+                output "MongoDB isn't installed - do you want to install it? [y|n] (press 'enter' for default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
@@ -1524,7 +1505,7 @@ while true; do
             fi
         else
             while true; do
-                output "Redis isn't installed - do you want to install it ? [y|n] (press 'enter' for default of 'y')"
+                output "Redis isn't installed - do you want to install it? [y|n] (press 'enter' for default of 'y')"
                 read -r -s -n 1 c
                 if [[ $c == "" ]]; then
                     c="y"
@@ -1598,63 +1579,82 @@ elif [[ $OS_VERSION == "Redhat" ]]; then
 fi
 
 
-nvm_install
+#nvm_install
+
+# make sure dirs exist
+if [[ ! -d $BUILDDIR ]]; then
+    mkdir -p $BUILDDIR
+fi
 
 # base install & build
-output "Running install step"
+output "Running install steps"
 cd $BUILDDIR
 base_install
+
+cd $BUILDDIR
 xapi_install
 
 # create tmp dir
 output "creating $TMPDIR"
-mkdir -p $TMPDIR
+if [[ ! -d $TMPDIR ]]; then
+    mkdir -p $TMPDIR
+fi
+if [[ ! -d ${TMPDIR}/${WEBAPP_SUBDIR}/ ]]; then
+    mkdir -p ${TMPDIR}/${WEBAPP_SUBDIR}
+fi
+if [[ ! -d ${TMPDIR}/${XAPI_SUBDIR}/ ]]; then
+    mkdir -p ${TMPDIR}/${XAPI_SUBDIR}
+fi
 
 # package.json
 output "copying modules...." true
-if [[ ! -f ${BUILDDIR}/learninglocker_node/package.json ]]; then
-    output "can't copy file '${BUILDDIR}/learninglocker_node/package.json' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/${WEBAPP_SUBDIR}/package.json ]]; then
+    output "can't copy file '${BUILDDIR}/${WEBAPP_SUBDIR}/package.json' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp ${BUILDDIR}/learninglocker_node/package.json $TMPDIR/
+cp ${BUILDDIR}/${WEBAPP_SUBDIR}/package.json ${TMPDIR}/${WEBAPP_SUBDIR}/
 
 # pm2 loader
-if [[ ! -f ${BUILDDIR}/learninglocker_node/pm2/all.json ]]; then
-    output "can't copy file '${BUILDDIR}/learninglocker_node/pm2/all.json' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json ]]; then
+    output "can't copy file '${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp ${BUILDDIR}/learninglocker_node/pm2/all.json.dist $TMPDIR/all.json
+cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
 
 # xapi config
-if [[ ! -f ${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist ]]; then
-    output "can't copy file '${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist' as it doesn't exist- exiting" false true
+if [[ ! -f ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist ]]; then
+    output "can't copy file '${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist' as it doesn't exist- exiting" false true
     exit 0
 fi
-if [[ ! -d ${TMPDIR}/xapi ]]; then
-    mkdir -p ${TMPDIR}/xapi
+if [[ ! -d ${TMPDIR}/${XAPI_SUBDIR} ]]; then
+    mkdir -p ${TMPDIR}/${XAPI_SUBDIR}
 fi
-cp ${BUILDDIR}/learninglocker_node/xapi/pm2/xapi.json.dist $TMPDIR/xapi/xapi.json
+cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
 
 # node_modules
-if [[ ! -d ${BUILDDIR}/learninglocker_node/node_modules ]]; then
-    output "can't copy directory '${BUILDDIR}/learninglocker_node/node_modules' as it doesn't exist- exiting" false true
+if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
+    output "can't copy directory '${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp -R ${BUILDDIR}/learninglocker_node/node_modules $TMPDIR/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
+cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules $TMPDIR/${WEBAPP_SUBDIR}/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
 print_spinner true
 
 output_log "copying nginx.conf.example to $TMPDIR"
-cp nginx.conf.example $TMPDIR/
+cp ${BUILDDIR}/${WEBAPP_SUBDIR}/nginx.conf.example $TMPDIR/${WEBAPP_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/learninglocker_node/.git to $TMPDIR"
-cp -R ${BUILDDIR}/learninglocker_node/.git $TMPDIR/
+output_log "copying ${BUILDDIR}/${WEBAPP_SUBDIR}/.git to $TMPDIR"
+cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/.git $TMPDIR/${WEBAPP_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/learninglocker_node/.env to $TMPDIR"
-cp ${BUILDDIR}/learninglocker_node/.env $TMPDIR/
+output_log "copying ${BUILDDIR}/${WEBAPP_SUBDIR}/.env to $TMPDIR"
+cp ${BUILDDIR}/${WEBAPP_SUBDIR}/.env $TMPDIR/${WEBAPP_SUBDIR}/
 
-output_log "copying ${BUILDDIR}/learninglocker_node/xapi/.env to $TMPDIR/xapi/"
-cp ${BUILDDIR}/learninglocker_node/xapi/.env $TMPDIR/xapi/
-checkCopyDir
+output_log "copying ${BUILDDIR}/${XAPI_SUBDIR}/.env to $TMPDIR/${XAPI_SUBDIR}/"
+cp ${BUILDDIR}/${XAPI_SUBDIR}/.env $TMPDIR/${XAPI_SUBDIR}/
+
+# full copy of remaining files
+output "copying files (may take some time)...." true
+cp -Rp $BUILDDIR/* $TMPDIR/
+output "done!" false true
 
 
 DATESTRING=`date +%Y%m%d`
@@ -1680,7 +1680,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     # UBUNTU & DEBIAN
     if [[ $OS_VERSION == "Ubuntu" ]] || [[ $OS_VERSION == "Debian" ]]; then
-        debian_nginx $TMPDIR $SYMLINK_PATH
+        debian_nginx ${TMPDIR}/${WEBAPP_SUBDIR} $SYMLINK_PATH/${WEBAPP_SUBDIR}
         if [[ $REDIS_INSTALL == true ]]; then
             debian_redis
         fi
@@ -1692,7 +1692,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         fi
     elif [[ $OS_VERSION == "Redhat" ]]; then
         # BASE REDHAT stuff
-        redhat_nginx $TMPDIR $SYMLINK_PATH
+        redhat_nginx ${TMPDIR}/${WEBAPP_SUBDIR} $SYMLINK_PATH/${WEBAPP_SUBDIR}
         if [[ $CLAM_INSTALL == true ]]; then
             redhat_clamav
         fi
@@ -1717,7 +1717,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                             output "BYPASS - installing mongo even without redis present"
                             break
                         fi
-                        output "As redis isn't going to be installed locally, do you still want to install MongoDB ? [y|n] (press enter for the default of 'y')"
+                        output "As redis isn't going to be installed locally, do you still want to install MongoDB? [y|n] (press enter for the default of 'y')"
                         read -s -r -n 1 n
                         output_log "user entered '${n}'"
                         if [[ $n == "n" ]]; then
@@ -1852,22 +1852,22 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
 
 
-    output_log "reprocessing $TMPDIR/all.json"
-    reprocess_pm2 $TMPDIR/all.json $SYMLINK_PATH $LOG_PATH $PID_PATH
-    output_log "reprocessing $TMPDIR/xapi/xapi.json"
-    reprocess_pm2 $TMPDIR/xapi/xapi.json ${SYMLINK_PATH}/xapi $LOG_PATH $PID_PATH
+    output_log "reprocessing $TMPDIR/${WEBAPP_SUBDIR}/all.json"
+    reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/all.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+    output_log "reprocessing $TMPDIR/${XAPI_SUBDIR}/xapi.json"
+    reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
 
 
     mkdir -p $LOCAL_PATH
     cp -R $TMPDIR/* $LOCAL_PATH/
-    # above line doesn't copy the .env so have to do this manually
-    cp $TMPDIR/.env $LOCAL_PATH/.env
-    cp -R $TMPDIR/.git $LOCAL_PATH/
+    # above line doesn't copy the 'dot' files so have to do this manually
+    cp $TMPDIR/${WEBAPP_SUBDIR}/.env $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
+    cp -R $TMPDIR/${WEBAPP_SUBDIR}/.git $LOCAL_PATH/${WEBAPP_SUBDIR}/.git
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
 
     # update the .env with the path to clamav
     if [[ $CLAM_INSTALLED == true ]]; then
-        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/.env
+        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
     fi
 
     # set up symlink
@@ -1887,7 +1887,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ]; then
         RUN_INSTALL_CMD=false
-        output "do you want to set up the organisation now to complete the installation ? [y|n] (press enter for the default of 'y')"
+        output "do you want to set up the organisation now to complete the installation? [y|n] (press enter for the default of 'y')"
         while true; do
             if [[ $AUTOSETUPUSER == true ]]; then
                 output "Automatic setup detected"
@@ -1954,7 +1954,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 done
                 while true; do
                     echo
-                    output "Is the following information correct ?"
+                    output "Is the following information correct?"
                     output "  Organisation  : $INSTALL_ORG"
                     output "  Email address : $INSTALL_EMAIL"
                     output "[y|n]"
@@ -1975,7 +1975,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
         if [[ $RUN_INSTALL_CMD == true ]]; then
             d=`pwd`
-            cd $LOCAL_PATH
+            cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}
             output "Attempting to create your site admin. If this step fails, then it is possible Mongo has not started."
             output "Attempt to manually start the Mongo service and then run this command:"
             output "cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin YOUR.EMAIL@ADDRESS.COM ORGANISATION_NAME YOUR_PASSWORD"
@@ -2033,30 +2033,45 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     mkdir -p $LOCAL_PATH
     cp -R $TMPDIR/* $LOCAL_PATH/
 
+    # block to determine directory format as it's changed/changing
+    COPYFROMPATH=${SYMLINK_PATH}/${WEBAPP_SUBDIR}
+    FORCEFULLRESTART=false
+    if [[ -f ${SYMLINK_PATH}/.env ]]; then
+        COPYFROMPATH=${SYMLINK_PATH}
+        FORCEFULLRESTART=true
+    fi
+
+
     # copy the .env from the existing install over to the new path
     output "Copying existing config to new version"
-    cp ${SYMLINK_PATH}/.env ${LOCAL_PATH}/.env
-    cp ${SYMLINK_PATH}/xapi/.env ${LOCAL_PATH}/xapi/.env
+    cp ${COPYFROMPATH}/.env ${LOCAL_PATH}/${WEBAPP_SUBDIR}/.env
+    cp ${SYMLINK_PATH}/${XAPI_SUBDIR}/.env ${LOCAL_PATH}/${XAPI_SUBDIR}/.env
 
     # copy the existing .git over
-    if [[ -d ${SYMLINK_PATH}/.git ]]; then
-        cp -R ${SYMLINK_PATH}/.git ${LOCAL_PATH}/
+    if [[ -d ${COPYFROMPATH}/.git ]]; then
+        cp -R ${COPYFROMPATH}/.git ${LOCAL_PATH}/${WEBAPP_SUBDIR}/
     fi
 
     # copy the pm2 files from existing install over
-    cp ${SYMLINK_PATH}/all.json ${LOCAL_PATH}/all.json
-    cp ${SYMLINK_PATH}/xapi/xapi.json ${LOCAL_PATH}/xapi/xapi.json
+    cp ${COPYFROMPATH}/all.json ${LOCAL_PATH}/${WEBAPP_SUBDIR}/all.json
+    cp ${SYMLINK_PATH}/${XAPI_SUBDIR}/xapi.json ${LOCAL_PATH}/${XAPI_SUBDIR}/xapi.json
+
+    # as we're upgrading the install, we need to re-jig the all.json to reflect the new paths
+    if [[ $FORCEFULLRESTART == true ]]; then
+        sed -i "s?$SYMLINK_PATH?${SYMLINK_PATH}/${WEBAPP_SUBDIR}?" ${LOCAL_PATH}/${WEBAPP_SUBDIR}/all.json
+    fi
 
     # copy anything in the storage dirs over
     output "Copying user uploaded data in storage/ folders to new install....." true
-    cp -nR ${SYMLINK_PATH}/storage/* ${LOCAL_PATH}/storage/
-    if [[ ! -d ${LOCAL_PATH}/xapi/storage ]]; then
-        mkdir -p ${LOCAL_PATH}/xapi/storage
+    cp -nR ${COPYFROMPATH}/storage/* ${LOCAL_PATH}/${WEBAPP_SUBDIR}/storage/
+    if [[ ! -d ${LOCAL_PATH}/${XAPI_SUBDIR}/storage ]]; then
+        mkdir -p ${LOCAL_PATH}/${XAPI_SUBDIR}/storage
     fi
-    cp -nR ${SYMLINK_PATH}/xapi/storage/* ${LOCAL_PATH}/xapi/storage/
+    cp -nR ${SYMLINK_PATH}/${XAPI_SUBDIR}/storage/* ${LOCAL_PATH}/${XAPI_SUBDIR}/storage/
     output "done!" false true
 
     chown $LOCAL_USER:$LOCAL_USER $LOCAL_PATH -R
+
 
     # prompt user that we're about to do the swap over
     UPDATE_RESTART=false
@@ -2072,6 +2087,11 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     while true; do
         if [[ $JUSTDOIT == true ]]; then
             output "defaulting to full restart on update"
+            UPDATE_RESTART=true
+            break
+        fi
+        if [[ $FORCEFULLRESTART == true ]]; then
+            output "Forcing full restart due to change in directory structure on update"
             UPDATE_RESTART=true
             break
         fi
@@ -2100,8 +2120,8 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
         unlink $SYMLINK_PATH
         ln -s $LOCAL_PATH $SYMLINK_PATH
         echo "[LL] starting PM2 processes...."
-        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}; $PM2_PATH start all.json"
-        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/xapi; $PM2_PATH start xapi.json"
+        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}; $PM2_PATH start all.json"
+        su - ${LOCAL_USER} -c "cd ${LOCAL_PATH}/${XAPI_SUBDIR}; $PM2_PATH start xapi.json"
         su - ${LOCAL_USER} -c "$PM2_PATH save"
         service pm2-${LOCAL_USER} restart
         echo "[LL] PM2 processes restarted"
@@ -2157,12 +2177,12 @@ echo "[LL] cleaning up temp directories"
 if [[ -d $TMPDIR ]]; then
     rm -R $TMPDIR
 fi
-if [[ -d ${BUILDDIR}/learninglocker_node ]]; then
-    rm -R ${BUILDDIR}/learninglocker_node
+if [[ -d ${BUILDDIR}/${WEBAPP_SUBDIR} ]]; then
+    rm -R ${BUILDDIR}/${WEBAPP_SUBDIR}
 fi
 
 
-if [[ $AUTOSETUPUSER == true ]]; then
+if [[ $AUTOSETUPUSER == true ]] && [[ $UPDATE_MODE == false ]]; then
     echo
     output "Auto-setup an account with following details:"
     output " email    : $INSTALL_EMAIL"
@@ -2172,7 +2192,7 @@ if [[ $AUTOSETUPUSER == true ]]; then
     echo
 fi
 
-if [[ $WRITE_AUTOSETUP == true ]]; then
+if [[ $WRITE_AUTOSETUP == true ]] && [[ $UPDATE_MODE == false ]]; then
     output_file=/home/ubuntu/ll_credentials.txt
     echo "email    : $INSTALL_EMAIL" > $output_file
     echo "org      : $INSTALL_ORG" >> $output_file
