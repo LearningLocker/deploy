@@ -1103,6 +1103,7 @@ JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes 
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
 AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
 WRITE_AUTOSETUP=false   # if -y is set to '4' then we will write to the output file (bottom of the script) for the auto generated credentials
+SETUP_AMI=false         # if -y is set to '5' then we bypass all questions, don't set up user but do clone out the deploy repo and prep for an AMI setup
 
 
 
@@ -1179,6 +1180,9 @@ while getopts ":h:y:b:" OPT; do
                 BYPASSALL=true
                 AUTOSETUPUSER=true
                 WRITE_AUTOSETUP=true
+            elif [[ $OPTARG == "5" ]]; then
+                BYPASSALL=true
+                SETUP_AMI=true
             fi
             ;;
         b)
@@ -1885,7 +1889,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     service pm2-${LOCAL_USER} start
 
-    if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ]; then
+    if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ] && [ $SETUP_AMI == false ]; then
         RUN_INSTALL_CMD=false
         output "do you want to set up the organisation now to complete the installation? [y|n] (press enter for the default of 'y')"
         while true; do
@@ -2193,8 +2197,42 @@ if [[ $AUTOSETUPUSER == true ]] && [[ $UPDATE_MODE == false ]]; then
 fi
 
 if [[ $WRITE_AUTOSETUP == true ]] && [[ $UPDATE_MODE == false ]]; then
-    output_file=/home/ubuntu/ll_credentials.txt
+    output_file=/usr/local/learninglocker/ll_credentials.txt
     echo "email    : $INSTALL_EMAIL" > $output_file
     echo "org      : $INSTALL_ORG" >> $output_file
     echo "password : $INSTALL_PASSWD" >> $output_file
+fi
+
+
+if [[ $SETUP_AMI == true ]]; then
+    output "Cloning out deploy git repo to tmp to seed AMI building"
+    cd /tmp
+    # check required dirs
+    if [[ -d /tmp/deploy ]]; then
+        rm -R /tmp/deploy
+    fi
+    if [[ ! -d /etc/learninglocker ]]; then
+        mkdir -p /etc/learninglocker
+    fi
+    # git clone
+    git clone https://github.com/LearningLocker/deploy deploy
+    cd deploy
+    # write install path
+    output "setting the install path in to /etc/learninglocker"
+    echo $SYMLINK_PATH > /etc/learninglocker/install_path
+    output "setting up user creation script"
+    # copy the script over to the local filesystem
+    cp startup_user_creation.sh /usr/sbin/ll_startup_user_creation.sh
+    chmod 755 /usr/sbin/ll_startup_user_creation.sh
+    # set up the service
+    output "setting up user creation service"
+    cp startup_user_creation.service /lib/systemd/system/ll_startup_user_creation.service
+    systemctl enable ll_startup_user_creation.service
+    # final output
+    output "done"
+    echo
+    output "if you want to now create an AMI you will need to run:"
+    output '/tmp/deploy/create_ami.sh -n "NAME" -d "DESCRIPTION" -a AWS_ACCOUNT_ID -k USER_KEY -s USER_SECRET -v VISIBILITY -r REGION'
+    output " where visibility is 'public' or 'private' & region is the AWS region name ie: us-east-1"
+    echo
 fi
