@@ -89,7 +89,12 @@ function determine_os_version ()
             OS_VNO=$(cat $REDHAT_FILE | awk '{print $7}')
             output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
             echo
-            output "Sorry, we don't support RHEL at the moment"
+            output "Sorry, we don't support RHEL at the moment - press 'e' to exit or any other key to continue"
+            read -r -s -n 1 n
+            output_log "user entered ${n}"
+            if [[ $n == "e" ]]; then
+                exit 0
+            fi
             echo
 
         # Fedora
