@@ -418,7 +418,21 @@ S3_REGIONS=()
 REGIONS=$(echo $AWS_REGION | tr "," "\n")
 for REGION in $REGIONS; do
     #EU,US,us-gov-west-1,us-west-1,us-west-2,ap-southeast-1,ap-southeast-2,ap-northeast-1,sa-east-1
-
+    # List of AWS supported regions
+    # us-east-1         : N. Virginia
+    # us-east-2         : Ohio
+    # us-west-1         : N. California
+    # us-west-2         : Oregon
+    # ca-central-1      : Canada Central
+    # eu-west-1         : Ireland
+    # eu-central-1      : Frankfurt
+    # eu-west-2         : London
+    # ap-southeast-1    : Singapore
+    # ap-southeast-2    : Sydney
+    # ap-northeast-2    : Seoul
+    # ap-northeast-1    : Tokyo
+    # ap-south-1        : Mumbai
+    # sa-east-1         : Sao Paulo
     # US west
     if [[ $REGION == "us-west-1" ]]; then
         S3_REGIONS+=('us-west-1')
@@ -449,8 +463,7 @@ for REGION in $REGIONS; do
         S3_REGIONS+=('sa-east-1')
     # default / failure case
     else
-        echo "AWS Region of $REGION is unsupported"
-        exit
+        S3_REGIONS+=(REGION)
     fi
 done
 
