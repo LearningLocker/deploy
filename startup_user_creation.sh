@@ -43,6 +43,13 @@ if [[ $CHK != "" ]]; then
     echo "email    : $INSTALL_EMAIL" > $CRED_FILE
     echo "org      : $INSTALL_ORG" >> $CRED_FILE
     echo "password : $INSTALL_PASSWD" >> $CRED_FILE
+
+    # get metadata
+    aws_region="`wget -q -O - http://169.254.169.254/latest/meta-data/placement/availability-zone`"
+    aws_ami="`wget -q -O - http://169.254.169.254/latest/meta-data/ami-id`"
+    # adding call to install checker
+    chk="`curl lrnloc.kr/AMIinstall`"
+
 else
     echo "[UC] User $INSTALL_EMAIL already exists, not creating" >> $INSTALL_LOG
 fi
