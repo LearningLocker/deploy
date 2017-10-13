@@ -602,6 +602,8 @@ function setup_nginx_config ()
 #################################################################################
 function debian_install ()
 {
+    export DEBIAN_FRONTEND=noninteractive
+
     # debian & ubuntu have a package called cmdtest which we need to uninstall as it'll conflict with yarn
     apt-get remove cmdtest >> $OUTPUT_LOG 2>>$ERROR_LOG &
 
