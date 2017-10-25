@@ -1121,7 +1121,7 @@ if [[ ! `command -v openssl` ]]; then
 fi
 
 # check system memory (in MB)
-SYSTEM_MEMORY=$(free -m | awk '/^Mem:/{print $2}')
+SYSTEM_MEMORY=$(free -m | awk '/^Mem/' | awk '{print $2}')
 if [[ $SYSTEM_MEMORY -lt $MIN_MEMORY ]]; then
     output "You need a minimum of ${MIN_MEMORY}Mb of system memory to install Learning Locker - can't continue"
     exit 0
