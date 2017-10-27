@@ -393,7 +393,12 @@ function base_install ()
     if [[ $DO_BASE_INSTALL -eq true ]]; then
         while true; do
             output_log "running git clone"
-            git clone -q -b ${GIT_BRANCH} https://github.com/LearningLocker/learninglocker ${WEBAPP_SUBDIR}
+            if [[ $ENTERPRISE == true ]]; then
+                MAIN_REPO=https://github.com/LearningLocker/learninglocker_node
+            else
+                MAIN_REPO=https://github.com/LearningLocker/learninglocker
+            fi
+            git clone -q -b ${GIT_BRANCH} $MAIN_REPO ${WEBAPP_SUBDIR}
             if [[ -d ${WEBAPP_SUBDIR} ]]; then
                 output_log "no ${WEBAPP_SUBDIR} dir after git - problem"
                 break
@@ -501,12 +506,21 @@ function xapi_install ()
     fi
 
     # npm
-    output "running npm install...." true
-    npm install >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    #output "running npm install...." true
+    #npm install >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    #print_spinner true
+
+    #output "running npm run build...." true
+    #npm run build >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    #print_spinner true
+
+    # yarn
+    output "running yarn install...." true
+    yarn install >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
-    output "running npm run build...." true
-    npm run build >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    output "running yarn build...." true
+    yarn build >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     cd ../
@@ -1082,6 +1096,9 @@ BYPASSALL=false         # if -y is set to '2' then we bypass any and all questio
 AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
 WRITE_AUTOSETUP=false   # if -y is set to '4' then we will write to the output file (bottom of the script) for the auto generated credentials
 SETUP_AMI=false         # if -y is set to '5' then we bypass all questions, don't set up user but do clone out the deploy repo and prep for an AMI setup
+ENTERPRISE=false        # if true then do things specific to enterprise (ie: don't set up mongo or redis).
+                        # this is designed to be mostly the same as the OS model so search for this variable to see differences
+                        # Can be set with '-e 1' as a command line param - you'll need to have github access to the private repos for it to work
 
 
 
@@ -1142,7 +1159,7 @@ fi
 #################################################################################
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-while getopts ":h:y:b:" OPT; do
+while getopts ":h:y:b:e:" OPT; do
     case "$OPT" in
         h)
             show_help
@@ -1166,6 +1183,10 @@ while getopts ":h:y:b:" OPT; do
         b)
             GIT_BRANCH=$OPTARG
             ;;
+        e)
+            if [[ $OPTARG == "1" ]]; then
+                ENTERPRISE=true
+            fi
     esac
 done
 
@@ -1599,7 +1620,6 @@ if [[ ! -f ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json ]]; then
     output "can't copy file '${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json' as it doesn't exist- exiting" false true
     exit 0
 fi
-cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
 
 # xapi config
 if [[ ! -f ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist ]]; then
@@ -1609,7 +1629,17 @@ fi
 if [[ ! -d ${TMPDIR}/${XAPI_SUBDIR} ]]; then
     mkdir -p ${TMPDIR}/${XAPI_SUBDIR}
 fi
-cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
+
+# copy the files
+if [[ $ENTERPRISE == true ]]; then
+    output "copying enterprise pm2 files"
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
+    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${WEBAPP_SUBDIR}/xapi.json
+else
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
+    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
+fi
 
 # node_modules
 if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
@@ -1639,6 +1669,14 @@ output "done!" false true
 
 DATESTRING=`date +%Y%m%d`
 LOCAL_PATH=${RELEASE_PATH}/ll-${DATESTRING}-${GIT_REV}
+
+
+### ENTERPRISE config
+if [[ $ENTERPRISE == true ]]; then
+    REDIS_INSTALL=false
+    MONGO_INSTALL=false
+    AUTOSETUPUSER=false
+fi
 
 
 if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
@@ -1832,10 +1870,17 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     chown -R ${LOCAL_USER}:${LOCAL_USER} $LOG_PATH
 
 
-    output_log "reprocessing $TMPDIR/${WEBAPP_SUBDIR}/all.json"
-    reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/all.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
-    output_log "reprocessing $TMPDIR/${XAPI_SUBDIR}/xapi.json"
-    reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
+    if [[ $ENTERPRISE != true ]]; then
+        output_log "reprocessing $TMPDIR/${WEBAPP_SUBDIR}/all.json"
+        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/all.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+        output_log "reprocessing $TMPDIR/${XAPI_SUBDIR}/xapi.json"
+        reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
+    else
+        output_log "reprocessing enterprise files"
+        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/webapp.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/xapi.json ${SYMLINK_PATH}/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+    fi
 
 
     mkdir -p $LOCAL_PATH
@@ -1860,8 +1905,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
 
     # set up init script and run any reprocessing we need
-    output_log "setting up init script. Path: $LOCAL_PATH user: $LOCAL_USER"
-    setup_init_script $LOCAL_PATH $LOCAL_USER
+    if [[ $ENTERPRISE != true ]]; then
+        output_log "setting up init script. Path: $LOCAL_PATH user: $LOCAL_USER"
+        setup_init_script $LOCAL_PATH $LOCAL_USER
+    fi
 
     service pm2-${LOCAL_USER} start
 
@@ -1901,7 +1948,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
                 done
                 while true; do
                     output "please enter the email address for the administrator account"
-                    read e
+                        read e
                     output_log "user entered '${e}'"
                     if [[ $e != "" ]]; then
                         INSTALL_EMAIL=$e
@@ -2172,6 +2219,7 @@ if [[ $AUTOSETUPUSER == true ]] && [[ $UPDATE_MODE == false ]]; then
     echo
 fi
 
+
 if [[ $WRITE_AUTOSETUP == true ]] && [[ $UPDATE_MODE == false ]]; then
     output_file=/usr/local/learninglocker/ll_credentials.txt
     echo "email    : $INSTALL_EMAIL" > $output_file
@@ -2179,28 +2227,56 @@ if [[ $WRITE_AUTOSETUP == true ]] && [[ $UPDATE_MODE == false ]]; then
     echo "password : $INSTALL_PASSWD" >> $output_file
 fi
 
-
+# generic AMI stuff for both OS and enterprise
 if [[ $SETUP_AMI == true ]]; then
     output "Cloning out deploy git repo to tmp to seed AMI building"
     cd /tmp
+    if [[ ! -d /etc/learninglocker ]]; then
+        mkdir -p /etc/learninglocker
+    fi
     # check required dirs
     if [[ -d /tmp/deploy ]]; then
         rm -R /tmp/deploy
     fi
-    if [[ ! -d /etc/learninglocker ]]; then
-        mkdir -p /etc/learninglocker
+    # git clone
+    git clone https://github.com/LearningLocker/deploy deploy
+fi
+
+
+# Enterprise AMI specific stuff
+if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
+    # check required dirs
+    if [[ -d /tmp/devops ]]; then
+        rm -R /tmp/devops
     fi
+
+    git clone https://github.com/LearningLocker/devops devops
+    cd devops
+
+    output "setting up env-fetch script"
+    cp startup_env_fetch.sh /usr/sbin/ll_startup_env_fetch.sh
+    chmod 755 /usr/sbin/ll_startup_env_fetch.sh
+    cp startup_env_fetch.service /lib/systemd/system/ll_startup_env_fetch.service
+    systemctl enable ll_startup_env_fetch
+
+    # tweak nginx loader to load after the new startup script
+    output "setting nginx to require the env fetch first"
+    sed -i "s/After=/After=ll_startup_env_fetch.service network.target/g" /lib/systemd/system/nginx.service
+    systemctl daemon-reload
+
+
+# open-source AMI stuff
+elif [[ $SETUP_AMI == true ]]; then
+    cd /tmp/deploy
+    # write install path
+    output "setting the install path in to /etc/learninglocker"
+    echo $SYMLINK_PATH > /etc/learninglocker/install_path
+    # user creation script
+    output "setting up user creation script"
     if [[ ! -f /var/log/learninglocker/user_setup.log ]]; then
         touch /var/log/learninglocker/user_setup.log
         chown ubuntu:ubuntu /var/log/learninglocker/user_setup.log
     fi
-    # git clone
-    git clone https://github.com/LearningLocker/deploy deploy
-    cd deploy
-    # write install path
-    output "setting the install path in to /etc/learninglocker"
-    echo $SYMLINK_PATH > /etc/learninglocker/install_path
-    output "setting up user creation script"
     # copy the script over to the local filesystem
     cp startup_user_creation.sh /usr/sbin/ll_startup_user_creation.sh
     chmod 755 /usr/sbin/ll_startup_user_creation.sh
@@ -2208,6 +2284,7 @@ if [[ $SETUP_AMI == true ]]; then
     output "setting up user creation service"
     cp startup_user_creation.service /lib/systemd/system/ll_startup_user_creation.service
     systemctl enable ll_startup_user_creation.service
+
     # final output
     output "done"
     echo
