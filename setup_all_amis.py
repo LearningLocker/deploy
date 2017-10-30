@@ -414,7 +414,7 @@ while True:
 print("[*] All servers alive")
 
 # sleep for 2 mins - this is just to make damn sure everything is working. AWS is a bit weird
-sleeptime = 20
+sleeptime = 60
 print("[*] Sleeping for " + repr(sleeptime) + " seconds to make sure the servers are running and not mis-reporting")
 time.sleep(sleeptime)
 
