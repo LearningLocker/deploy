@@ -233,13 +233,13 @@ args = parser.parse_args()
 
 # name
 if not args.name or len(args.name) < 4:
-    print "FATAL: no name for the AMI passed in"
+    print("FATAL: no name for the AMI passed in")
     sys.exit()
 ami_name = args.name
 
 # description
 if not args.description or len(args.description) < 4:
-    print "FATAL: no description for the AMI passed in"
+    print("FATAL: no description for the AMI passed in")
     sys.exit()
 ami_desc = args.description
 
