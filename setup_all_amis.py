@@ -13,14 +13,16 @@
 #    export AWS_ACCOUNT_ID=007712106137
 #
 # TODO
-#   ebs volume size of instances
+#   Make sure we can read the keyfiles - if we can't, we shouldn't even spin up a server
+#   run boto3 check on aws credentials as it uses ~/.aws/credentials
 #   validate key / sg exists
 #   move validate_region() data to a file
 #
 # REQUIREMENTS
+# apt-get install awscli
+# set up AWS tools - http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 # pip install paramiko
 # pip install argparse
-# pip install os
 # pip install boto3
 
 import os
