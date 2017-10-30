@@ -210,7 +210,7 @@ distro_version = "16.04"
 build_name = "ll_py_build"
 instance_size = "t2.small"
 keyfile_path = "/etc/ht2keys/"
-enterpise_mode = False
+enterprise_mode = False
 
 
 ################################################################
