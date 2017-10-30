@@ -322,7 +322,7 @@ print("Enterprise mode     : " + repr(enterprise_mode))
 print("Warning - the security groups and keypairs must be set up in advance in validate_regions() or things WILL break")
 
 while True:
-    chk = raw_input("Press enter to continue ")
+    chk = input("Press enter to continue ")
     if str(chk) == "":
         break
 
@@ -331,7 +331,7 @@ while True:
 # SPIN UP AMIs
 ################################################################
 
-ec2 = boto3.client("ec2")
+ec2 = boto3.client("ec2", region_name=region)
 
 # check keypair & security groups exist in every region we want to launch in
 #print("Checking keypair and security group data")
