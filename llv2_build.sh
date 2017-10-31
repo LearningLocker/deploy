@@ -782,7 +782,7 @@ function redhat_epel ()
         return
     fi
     output "setting up EPEL repository...." true
-    yum install epel-release >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    yum -y install epel-release >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
     REDHAT_EPEL_INSTALLED=true
 }
@@ -792,7 +792,7 @@ function redhat_redis ()
 {
     output "installing redis"
     redhat_epel
-    yum install redis >> $OUTPUT_LOG 2>>$ERROR_LOG
+    yum -y install redis >> $OUTPUT_LOG 2>>$ERROR_LOG
     service redis start >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
@@ -1014,7 +1014,7 @@ function fedora_redis ()
 function fedora_mongo ()
 {
     output "installing mongodb"
-    yum install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG
+    yum -y install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
 
