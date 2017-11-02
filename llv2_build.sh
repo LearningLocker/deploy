@@ -829,7 +829,7 @@ function redhat_clamav ()
 function redhat_install ()
 {
     output "installing base software...." true
-    yum -y install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    yum -y install curl wget git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     if [[ ! `command -v pwmake` ]]; then
