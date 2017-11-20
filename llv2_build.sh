@@ -766,7 +766,7 @@ function debian_redis ()
 function debian_clamav ()
 {
     output "Installing ClamAV...." true
-    apt-get -y -qq install clamav >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    apt-get -y -qq install clamav clamav-daemon >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
     CLAM_INSTALLED=true
 }
