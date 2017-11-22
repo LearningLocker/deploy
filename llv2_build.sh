@@ -598,6 +598,7 @@ function setup_nginx_config ()
     fi
 
     UI_PORT=`fgrep UI_PORT $2 | sed 's/UI_PORT=//' | sed 's/\r//' `
+    API_PORT=`fgrep API_PORT $2| sed 's/API_PORT=//' | sed 's/\r//' `
     XAPI_PORT=`fgrep EXPRESS_PORT $3| sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
 
     output_log "nginx - setting ui port to $UI_PORT"
@@ -605,6 +606,7 @@ function setup_nginx_config ()
     output_log "nginx - setting site root to $4"
 
     sed -i "s/UI_PORT/${UI_PORT}/" $1
+    sed -i "s/:API_PORT/:${API_PORT}/" $1
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" $1
     sed -i "s?/SITE_ROOT?${4}?" $1
 }
