@@ -2071,6 +2071,17 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     fi
 
 
+    O_V_FILE=${SYMLINK_PATH}/${WEBAPP_SUBDIR}/VERSION
+    DO_MIGRATIONS=false
+    if [[ -f $O_V_FILE ]]; then
+        CUR_VER=`cat ${O_V_FILE}`
+        if [[ $CUR_VER != "" ]]; then
+            if [[ `cat $CUR_VAR | grep "^2.0" | wc -l` -ge 1 ]]; then
+                DO_MIGRATIONS=true
+            fi
+        fi
+    fi
+
     # copy the .env from the existing install over to the new path
     output "Copying existing config to new version"
     cp ${COPYFROMPATH}/.env ${LOCAL_PATH}/${WEBAPP_SUBDIR}/.env
@@ -2171,7 +2182,13 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
 
         echo "[LL] reloading pm2"
         service pm2-${LOCAL_USER} reload
+    fi
 
+
+    # migration logic
+    if [[ $DO_MIGRATIONS == true ]]; then
+        cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}
+        yarn migrate
     fi
 
 
