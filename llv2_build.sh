@@ -2076,7 +2076,7 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     if [[ -f $O_V_FILE ]]; then
         CUR_VER=`cat ${O_V_FILE}`
         if [[ $CUR_VER != "" ]]; then
-            if [[ `cat $CUR_VAR | grep "^2.0" | wc -l` -ge 1 ]]; then
+            if [[ `cat $CUR_VAR | grep "^2.0" | wc -l` -eq 0 ]]; then
                 DO_MIGRATIONS=true
             fi
         fi
