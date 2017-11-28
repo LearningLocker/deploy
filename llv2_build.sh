@@ -1189,6 +1189,7 @@ while getopts ":h:y:b:e:" OPT; do
             if [[ $OPTARG == "1" ]]; then
                 ENTERPRISE=true
             fi
+            ;;
     esac
 done
 
