@@ -2270,6 +2270,9 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         rm -R /tmp/devops
     fi
 
+    apt-get -y install awscli
+    aws configure
+
     git clone https://github.com/LearningLocker/devops devops
     cd devops
 
