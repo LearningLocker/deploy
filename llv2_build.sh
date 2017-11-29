@@ -598,26 +598,20 @@ function setup_nginx_config ()
         return 0
     fi
 
-    output "debug 1"
     UI_PORT=`fgrep UI_PORT $2 | sed 's/UI_PORT=//' | sed 's/\r//' `
-    output "debug 2"
     API_PORT=`fgrep API_PORT $2| sed 's/API_PORT=//' | sed 's/\r//' `
-    output "debug 3"
     XAPI_PORT=`fgrep EXPRESS_PORT $3| sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
-    output "debug 4"
 
     output_log "nginx - setting ui port to $UI_PORT"
     output_log "nginx - setting xapi port to $XAPI_PORT"
     output_log "nginx - setting site root to $4"
 
     sed -i "s/UI_PORT/${UI_PORT}/" $1
-    output "debug 5"
+    output "debug 5 - ${API_PORT}"
     sed -i "s/:API_PORT/:${API_PORT}/" $1
     output "debug 6"
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" $1
-    output "debug 7"
     sed -i "s?/SITE_ROOT?${4}?" $1
-    output "debug 8"
 }
 
 
@@ -1649,7 +1643,6 @@ if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
 fi
 cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules $TMPDIR/${WEBAPP_SUBDIR}/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
 print_spinner true
-output "done!" false true
 
 
 # copy the files
@@ -1832,7 +1825,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             read -n 1 n
         fi
         echo
-    elif [[ $REDIS_INSTALL == false ]] && [[ $REDIS_INSTALLED == true ]]; then
+    elif [[ $REDIS_INSTALL == false ]] && [[ $REDIS_INSTALLED == true ]] && [[ $ENTERPRISE == false ]]; then
         # only hit this bit if redis was installed already
         output "Redis appears to have already been installed on this server. By default, Redis doesn't have a huge amount"
         output "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of Redis" false true
@@ -1859,7 +1852,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             read -n 1 n
         fi
         echo
-    elif [[ $MONGO_INSTALL == false ]] && [[ $MONGO_INSTALLED == true ]]; then
+    elif [[ $MONGO_INSTALL == false ]] && [[ $MONGO_INSTALLED == true ]] && [[ $ENTERPRISE == false ]]; then
         # only hit this bit if mongo was installed already
         output "MongoDB appears to have already been installed on this server. By default, MongoDB doesn't have a huge amount"
         output "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of MongoDB" false true
@@ -2285,7 +2278,6 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     fi
 
     apt-get -y install awscli
-    aws configure
 
     while true; do
         git clone https://github.com/LearningLocker/devops devops
