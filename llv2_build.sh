@@ -597,18 +597,26 @@ function setup_nginx_config ()
         return 0
     fi
 
+    output "debug 1"
     UI_PORT=`fgrep UI_PORT $2 | sed 's/UI_PORT=//' | sed 's/\r//' `
+    output "debug 2"
     API_PORT=`fgrep API_PORT $2| sed 's/API_PORT=//' | sed 's/\r//' `
+    output "debug 3"
     XAPI_PORT=`fgrep EXPRESS_PORT $3| sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
+    output "debug 4"
 
     output_log "nginx - setting ui port to $UI_PORT"
     output_log "nginx - setting xapi port to $XAPI_PORT"
     output_log "nginx - setting site root to $4"
 
     sed -i "s/UI_PORT/${UI_PORT}/" $1
+    output "debug 5"
     sed -i "s/:API_PORT/:${API_PORT}/" $1
+    output "debug 6"
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" $1
+    output "debug 7"
     sed -i "s?/SITE_ROOT?${4}?" $1
+    output "debug 8"
 }
 
 
@@ -1633,17 +1641,6 @@ if [[ ! -d ${TMPDIR}/${XAPI_SUBDIR} ]]; then
     mkdir -p ${TMPDIR}/${XAPI_SUBDIR}
 fi
 
-# copy the files
-if [[ $ENTERPRISE == true ]]; then
-    output "copying enterprise pm2 files"
-    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
-    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
-    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${WEBAPP_SUBDIR}/xapi.json
-else
-    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
-    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
-fi
-
 # node_modules
 if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
     output "can't copy directory '${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules' as it doesn't exist- exiting" false true
@@ -1651,6 +1648,18 @@ if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
 fi
 cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules $TMPDIR/${WEBAPP_SUBDIR}/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
 print_spinner true
+
+# copy the files
+if [[ $ENTERPRISE == true ]]; then
+    output "Copying enterprise pm2 configs"
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
+    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${WEBAPP_SUBDIR}/xapi.json
+else
+    output "Copying pm2 configs"
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
+    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
+fi
 
 output_log "copying nginx.conf.example to $TMPDIR"
 cp ${BUILDDIR}/${WEBAPP_SUBDIR}/nginx.conf.example $TMPDIR/${WEBAPP_SUBDIR}/
@@ -2280,7 +2289,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         else
             break
         fi
-    fi
+    done
     cd devops
 
     output "setting up env-fetch script"
