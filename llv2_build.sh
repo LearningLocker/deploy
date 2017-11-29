@@ -573,6 +573,7 @@ function reprocess_pm2 ()
 # $4 is the path to the install - typically this should be the path to the symlink directory rather than the release dir
 function setup_nginx_config ()
 {
+    output "Setting up nginx config"
     if [[ ! -f $1 ]]; then
         output "Warning :: nginx config in $1 can't be found - will need to be edited manually. Press any key to continue"
         if [[ $BYPASSALL == false ]]; then
@@ -1831,7 +1832,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             read -n 1 n
         fi
         echo
-    elif [[ $REDIS_INSTALL == false ]]; then
+    elif [[ $REDIS_INSTALL == false ]] && [[ $REDIS_INSTALLED == true ]]; then
         # only hit this bit if redis was installed already
         output "Redis appears to have already been installed on this server. By default, Redis doesn't have a huge amount"
         output "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of Redis" false true
@@ -1858,7 +1859,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             read -n 1 n
         fi
         echo
-    elif [[ $MONGO_INSTALL == false ]]; then
+    elif [[ $MONGO_INSTALL == false ]] && [[ $MONGO_INSTALLED == true ]]; then
         # only hit this bit if mongo was installed already
         output "MongoDB appears to have already been installed on this server. By default, MongoDB doesn't have a huge amount"
         output "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of MongoDB" false true
