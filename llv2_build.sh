@@ -602,6 +602,7 @@ function setup_nginx_config ()
     XAPI_PORT=`fgrep EXPRESS_PORT $3| sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
 
     output_log "nginx - setting ui port to $UI_PORT"
+    output_log "nginx - setting api port to $API_PORT"
     output_log "nginx - setting xapi port to $XAPI_PORT"
     output_log "nginx - setting site root to $4"
 
