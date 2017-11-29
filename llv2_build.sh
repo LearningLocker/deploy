@@ -1638,7 +1638,7 @@ if [[ $ENTERPRISE == true ]]; then
     output "copying enterprise pm2 files"
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
-    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist$ TMPDIR/${WEBAPP_SUBDIR}/xapi.json
+    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${WEBAPP_SUBDIR}/xapi.json
 else
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
     cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
