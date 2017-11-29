@@ -1648,6 +1648,8 @@ if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
 fi
 cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules $TMPDIR/${WEBAPP_SUBDIR}/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
 print_spinner true
+output "done!" false true
+
 
 # copy the files
 if [[ $ENTERPRISE == true ]]; then
@@ -1685,6 +1687,8 @@ LOCAL_PATH=${RELEASE_PATH}/ll-${DATESTRING}-${GIT_REV}
 
 ### ENTERPRISE config
 if [[ $ENTERPRISE == true ]]; then
+    REDIS_INSTALLED=false
+    MONGO_INSTALLED=false
     REDIS_INSTALL=false
     MONGO_INSTALL=false
     AUTOSETUPUSER=false
