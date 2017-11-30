@@ -608,10 +608,27 @@ function setup_nginx_config ()
     output_log "nginx - setting site root to $4"
 
     sed -i "s/UI_PORT/${UI_PORT}/" $1
-    output "debug 5 - ${API_PORT}"
     sed -i "s/:API_PORT/:${API_PORT}/" $1
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" $1
     sed -i "s?/SITE_ROOT?${4}?" $1
+}
+
+# $1 is the path to the nginx config file
+# $2 is the path to the install dir (symlink dir)
+function setup_nginx_enterprise ()
+{
+    output "Running nginx enterprise setup"
+
+    if [[ ! -f $1 ]]; then
+        output "Warning :: nginx config in $1 can't be found - will need to be edited manually. Press any key to continue"
+        if [[ $BYPASSALL == false ]]; then
+            read -r -s -n 1 n
+        fi
+        return 0
+    fi
+
+    output_log "nginx - setting site root to $2"
+    sed -i "s?/SITE_ROOT?${2}?" $1
 }
 
 
@@ -678,7 +695,9 @@ function debian_install ()
     fi
 }
 
-
+# $1 is temp path to the webapp subdir
+# $2 is the symlink path to the webappsubdir
+#
 function debian_nginx ()
 {
     if [[ ! -d $1 ]]; then
@@ -726,9 +745,12 @@ function debian_nginx ()
     mv ${1}/nginx.conf.example $NGINX_CONFIG
     ln -s $NGINX_CONFIG /etc/nginx/sites-enabled/learninglocker.conf
     # sub in variables from the .envs to the nginx config
-    setup_nginx_config $NGINX_CONFIG $BASE_ENV $XAPI_ENV $2
-
-    service nginx restart
+    if [[ $ENTERPRISE == true ]]; then
+        setup_nginx_enterprise $NGINX_CONFIG $2
+    else
+        setup_nginx_config $NGINX_CONFIG $BASE_ENV $XAPI_ENV $2
+        service nginx restart
+    fi
 }
 
 
@@ -1650,7 +1672,7 @@ if [[ $ENTERPRISE == true ]]; then
     output "Copying enterprise pm2 configs"
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
-    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${WEBAPP_SUBDIR}/xapi.json
+    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
 else
     output "Copying pm2 configs"
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
