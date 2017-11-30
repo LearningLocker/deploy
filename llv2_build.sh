@@ -1940,9 +1940,9 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     if [[ $ENTERPRISE != true ]]; then
         output_log "setting up init script. Path: $LOCAL_PATH user: $LOCAL_USER"
         setup_init_script $LOCAL_PATH $LOCAL_USER
+        service pm2-${LOCAL_USER} start
     fi
 
-    service pm2-${LOCAL_USER} start
 
     if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ] && [ $SETUP_AMI == false ]; then
         RUN_INSTALL_CMD=false
