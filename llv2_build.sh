@@ -1906,12 +1906,12 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output_log "reprocessing $TMPDIR/${WEBAPP_SUBDIR}/all.json"
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/all.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         output_log "reprocessing $TMPDIR/${XAPI_SUBDIR}/xapi.json"
-        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
     else
-        output_log "reprocessing enterprise files"
+        output "reprocessing enterprise files"
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/webapp.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
-        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/xapi.json ${SYMLINK_PATH}/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
     fi
 
 
