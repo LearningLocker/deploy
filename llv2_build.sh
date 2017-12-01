@@ -516,7 +516,7 @@ function xapi_install ()
 
     # yarn
     output "running yarn install...." true
-    yarn install >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    yarn install --ignore-engines >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     output "running yarn build...." true
