@@ -485,11 +485,15 @@ function xapi_install ()
 
     # do the checkout in a loop in case the users enters user/pass incorrectly
     if [[ $DO_XAPI_CHECKOUT -eq true ]]; then
+        # TODO - make this do a max itteration of say 3 attempts to clone
         while true; do
             output_log "attempting git clone for xapi"
             git clone -q https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
-            if [[ -d ${XAPI_SUBDIR} ]]; then
+            if [[ ! -d ${XAPI_SUBDIR} ]]; then
                 output_log "git clone appears to have failed"
+                break
+            else
+                output_log "git clone succeeded"
                 break
             fi
         done
@@ -1911,7 +1915,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output "reprocessing enterprise files"
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/webapp.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
-        reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
     fi
 
 
@@ -2299,7 +2303,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         rm -R /tmp/devops
     fi
 
-    apt-get -y install awscli
+    apt-get -y install awscli redis-tools mongodb-clients
 
     while true; do
         git clone https://github.com/LearningLocker/devops devops
