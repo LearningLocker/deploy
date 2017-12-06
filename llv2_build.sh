@@ -488,7 +488,7 @@ function xapi_install ()
         # TODO - make this do a max itteration of say 3 attempts to clone
         while true; do
             output_log "attempting git clone for xapi"
-            git clone -q https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
+            git clone -q -b {XAPI_BRANCH} https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
             if [[ ! -d ${XAPI_SUBDIR} ]]; then
                 output_log "git clone appears to have failed"
                 break
@@ -1101,6 +1101,7 @@ LOCAL_PATH=false
 LOCAL_USER=false
 TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
+XAPI_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
 BUILDDIR="${_TD}/learninglocker"
@@ -1190,7 +1191,7 @@ fi
 #################################################################################
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-while getopts ":h:y:b:e:" OPT; do
+while getopts ":h:y:b:x:e:" OPT; do
     case "$OPT" in
         h)
             show_help
@@ -1213,6 +1214,9 @@ while getopts ":h:y:b:e:" OPT; do
             ;;
         b)
             GIT_BRANCH=$OPTARG
+            ;;
+        x)
+            XAPI_BRANCH=$OPTARG
             ;;
         e)
             if [[ $OPTARG == "1" ]]; then
