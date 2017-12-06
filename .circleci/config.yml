@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: ubuntu:xenial
+      - image: debian:stretch
     steps:
       - checkout
       - run: apt-get update && apt-get upgrade -y
