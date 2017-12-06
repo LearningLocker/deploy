@@ -488,7 +488,7 @@ function xapi_install ()
         # TODO - make this do a max itteration of say 3 attempts to clone
         while true; do
             output_log "attempting git clone for xapi"
-            git clone -q -b {XAPI_BRANCH} https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
+            git clone -q -b ${XAPI_BRANCH} https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
             if [[ ! -d ${XAPI_SUBDIR} ]]; then
                 output_log "git clone appears to have failed"
                 break
