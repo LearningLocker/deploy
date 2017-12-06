@@ -7,9 +7,8 @@ jobs:
     steps:
       - checkout
       - run: apt-get update && apt-get upgrade -y
-      - run: apt-get install -y libssl-dev
-      - run: command -v openssl
       - run:
+          shell: /bin/sh
           name: Install application
           command: ./llv2_build.sh -y 3
       - run:
