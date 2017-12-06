@@ -1349,6 +1349,14 @@ while true; do
             output "release path: $RELEASE_PATH"
             output "symlink path: $SYMLINK_PATH"
             output "user: $LOCAL_USER"
+            # clamav
+            if [[ `command -v clamscan` ]]; then
+                output "ClamAV already installed"
+                CLAM_PATH=`command -v clamscan`
+                CLAM_INSTALLED=true
+            else
+                CLAM_INSTALL=true
+            fi
 
             break
         fi
