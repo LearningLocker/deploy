@@ -6,6 +6,7 @@ jobs:
       - image: debian:stretch
     steps:
       - checkout
+      - run: apt-get install -y sudo
       - run:
           name: Install application
           command: sudo su -c "./llv2_build.sh -y 3"
