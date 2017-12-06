@@ -2,8 +2,8 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: debian:stretch
+    machine:
+      image: circleci/classic:latest
     steps:
       - checkout
       - run: apt-get update && apt-get upgrade -y
