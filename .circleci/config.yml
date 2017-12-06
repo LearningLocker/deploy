@@ -6,10 +6,9 @@ jobs:
       - image: debian:stretch
     steps:
       - checkout
-      - run: apt-get install -y sudo
       - run:
           name: Install application
-          command: sudo su -c "./llv2_build.sh -y 3"
+          command: ./llv2_build.sh -y 3
       - run:
           name: Test xAPI
           command: ./tests/checkURL.sh -u localhost/data/xAPI/about
