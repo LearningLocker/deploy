@@ -485,11 +485,15 @@ function xapi_install ()
 
     # do the checkout in a loop in case the users enters user/pass incorrectly
     if [[ $DO_XAPI_CHECKOUT -eq true ]]; then
+        # TODO - make this do a max itteration of say 3 attempts to clone
         while true; do
             output_log "attempting git clone for xapi"
-            git clone -q https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
-            if [[ -d ${XAPI_SUBDIR} ]]; then
+            git clone -q -b ${XAPI_BRANCH} https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
+            if [[ ! -d ${XAPI_SUBDIR} ]]; then
                 output_log "git clone appears to have failed"
+                break
+            else
+                output_log "git clone succeeded"
                 break
             fi
         done
@@ -573,6 +577,7 @@ function reprocess_pm2 ()
 # $4 is the path to the install - typically this should be the path to the symlink directory rather than the release dir
 function setup_nginx_config ()
 {
+    output "Setting up nginx config"
     if [[ ! -f $1 ]]; then
         output "Warning :: nginx config in $1 can't be found - will need to be edited manually. Press any key to continue"
         if [[ $BYPASSALL == false ]]; then
@@ -597,16 +602,37 @@ function setup_nginx_config ()
         return 0
     fi
 
-    UI_PORT=`fgrep UI_PORT $2 | sed 's/UI_PORT=//' | sed 's/\r//' `
-    XAPI_PORT=`fgrep EXPRESS_PORT $3| sed 's/EXPRESS_PORT=//' | sed 's/\r//' `
+    UI_PORT=`egrep '^UI_PORT(\s)?=' $2 | tail -1 | sed -r 's/UI_PORT(\s)?=(\s)?//' | sed 's/\r//' `
+    API_PORT=`egrep '^API_PORT(\s)?=' $2 | tail -1 | sed -r 's/API_PORT(\s)?=(\s)?//' | sed 's/\r//' `
+    XAPI_PORT=`egrep '^EXPRESS_PORT(\s)?=' $3 | tail -1 | sed -r 's/EXPRESS_PORT(\s)?=(\s)?//' | sed 's/\r//' `
 
     output_log "nginx - setting ui port to $UI_PORT"
+    output_log "nginx - setting api port to $API_PORT"
     output_log "nginx - setting xapi port to $XAPI_PORT"
     output_log "nginx - setting site root to $4"
 
     sed -i "s/UI_PORT/${UI_PORT}/" $1
+    sed -i "s/:API_PORT/:${API_PORT}/" $1
     sed -i "s/XAPI_PORT/${XAPI_PORT}/" $1
     sed -i "s?/SITE_ROOT?${4}?" $1
+}
+
+# $1 is the path to the nginx config file
+# $2 is the path to the install dir (symlink dir)
+function setup_nginx_enterprise ()
+{
+    output "Running nginx enterprise setup"
+
+    if [[ ! -f $1 ]]; then
+        output "Warning :: nginx config in $1 can't be found - will need to be edited manually. Press any key to continue"
+        if [[ $BYPASSALL == false ]]; then
+            read -r -s -n 1 n
+        fi
+        return 0
+    fi
+
+    output_log "nginx - setting site root to $2"
+    sed -i "s?/SITE_ROOT?${2}?" $1
 }
 
 
@@ -673,7 +699,9 @@ function debian_install ()
     fi
 }
 
-
+# $1 is temp path to the webapp subdir
+# $2 is the symlink path to the webappsubdir
+#
 function debian_nginx ()
 {
     if [[ ! -d $1 ]]; then
@@ -721,9 +749,12 @@ function debian_nginx ()
     mv ${1}/nginx.conf.example $NGINX_CONFIG
     ln -s $NGINX_CONFIG /etc/nginx/sites-enabled/learninglocker.conf
     # sub in variables from the .envs to the nginx config
-    setup_nginx_config $NGINX_CONFIG $BASE_ENV $XAPI_ENV $2
-
-    service nginx restart
+    if [[ $ENTERPRISE == true ]]; then
+        setup_nginx_enterprise $NGINX_CONFIG $2
+    else
+        setup_nginx_config $NGINX_CONFIG $BASE_ENV $XAPI_ENV $2
+        service nginx restart
+    fi
 }
 
 
@@ -766,7 +797,7 @@ function debian_redis ()
 function debian_clamav ()
 {
     output "Installing ClamAV...." true
-    apt-get -y -qq install clamav >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    apt-get -y -qq install clamav clamav-daemon >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
     CLAM_INSTALLED=true
 }
@@ -1070,6 +1101,7 @@ LOCAL_PATH=false
 LOCAL_USER=false
 TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
+XAPI_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
 BUILDDIR="${_TD}/learninglocker"
@@ -1159,7 +1191,7 @@ fi
 #################################################################################
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-while getopts ":h:y:b:e:" OPT; do
+while getopts ":h:y:b:x:e:" OPT; do
     case "$OPT" in
         h)
             show_help
@@ -1183,10 +1215,14 @@ while getopts ":h:y:b:e:" OPT; do
         b)
             GIT_BRANCH=$OPTARG
             ;;
+        x)
+            XAPI_BRANCH=$OPTARG
+            ;;
         e)
             if [[ $OPTARG == "1" ]]; then
                 ENTERPRISE=true
             fi
+            ;;
     esac
 done
 
@@ -1313,6 +1349,14 @@ while true; do
             output "release path: $RELEASE_PATH"
             output "symlink path: $SYMLINK_PATH"
             output "user: $LOCAL_USER"
+            # clamav
+            if [[ `command -v clamscan` ]]; then
+                output "ClamAV already installed"
+                CLAM_PATH=`command -v clamscan`
+                CLAM_INSTALLED=true
+            else
+                CLAM_INSTALL=true
+            fi
 
             break
         fi
@@ -1630,17 +1674,6 @@ if [[ ! -d ${TMPDIR}/${XAPI_SUBDIR} ]]; then
     mkdir -p ${TMPDIR}/${XAPI_SUBDIR}
 fi
 
-# copy the files
-if [[ $ENTERPRISE == true ]]; then
-    output "copying enterprise pm2 files"
-    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
-    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
-    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${WEBAPP_SUBDIR}/xapi.json
-else
-    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
-    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
-fi
-
 # node_modules
 if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
     output "can't copy directory '${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules' as it doesn't exist- exiting" false true
@@ -1648,6 +1681,19 @@ if [[ ! -d ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules ]]; then
 fi
 cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/node_modules $TMPDIR/${WEBAPP_SUBDIR}/ >> $OUTPUT_LOG 2>>$ERROR_LOG &
 print_spinner true
+
+
+# copy the files
+if [[ $ENTERPRISE == true ]]; then
+    output "Copying enterprise pm2 configs"
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
+    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
+else
+    output "Copying pm2 configs"
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/all.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/all.json
+    cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
+fi
 
 output_log "copying nginx.conf.example to $TMPDIR"
 cp ${BUILDDIR}/${WEBAPP_SUBDIR}/nginx.conf.example $TMPDIR/${WEBAPP_SUBDIR}/
@@ -1673,6 +1719,8 @@ LOCAL_PATH=${RELEASE_PATH}/ll-${DATESTRING}-${GIT_REV}
 
 ### ENTERPRISE config
 if [[ $ENTERPRISE == true ]]; then
+    REDIS_INSTALLED=false
+    MONGO_INSTALLED=false
     REDIS_INSTALL=false
     MONGO_INSTALL=false
     AUTOSETUPUSER=false
@@ -1815,7 +1863,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             read -n 1 n
         fi
         echo
-    elif [[ $REDIS_INSTALL == false ]]; then
+    elif [[ $REDIS_INSTALL == false ]] && [[ $REDIS_INSTALLED == true ]] && [[ $ENTERPRISE == false ]]; then
         # only hit this bit if redis was installed already
         output "Redis appears to have already been installed on this server. By default, Redis doesn't have a huge amount"
         output "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of Redis" false true
@@ -1842,7 +1890,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
             read -n 1 n
         fi
         echo
-    elif [[ $MONGO_INSTALL == false ]]; then
+    elif [[ $MONGO_INSTALL == false ]] && [[ $MONGO_INSTALLED == true ]] && [[ $ENTERPRISE == false ]]; then
         # only hit this bit if mongo was installed already
         output "MongoDB appears to have already been installed on this server. By default, MongoDB doesn't have a huge amount"
         output "     of security enabled and as such, the default Learning Locker config is set up to use the local copy of MongoDB" false true
@@ -1876,10 +1924,10 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output_log "reprocessing $TMPDIR/${XAPI_SUBDIR}/xapi.json"
         reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
     else
-        output_log "reprocessing enterprise files"
+        output "reprocessing enterprise files"
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/webapp.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
-        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/xapi.json ${SYMLINK_PATH}/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
     fi
 
 
@@ -1908,9 +1956,9 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
     if [[ $ENTERPRISE != true ]]; then
         output_log "setting up init script. Path: $LOCAL_PATH user: $LOCAL_USER"
         setup_init_script $LOCAL_PATH $LOCAL_USER
+        service pm2-${LOCAL_USER} start
     fi
 
-    service pm2-${LOCAL_USER} start
 
     if [ $MONGO_INSTALLED == true ] && [ $REDIS_INSTALLED == true ] && [ $SETUP_AMI == false ]; then
         RUN_INSTALL_CMD=false
@@ -2069,6 +2117,17 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     fi
 
 
+    O_V_FILE=${SYMLINK_PATH}/${WEBAPP_SUBDIR}/VERSION
+    DO_MIGRATIONS=false
+    if [[ -f $O_V_FILE ]]; then
+        CUR_VER=`cat ${O_V_FILE}`
+        if [[ $CUR_VER != "" ]]; then
+            if [[ `cat $CUR_VAR | grep "^2.0" | wc -l` -eq 0 ]]; then
+                DO_MIGRATIONS=true
+            fi
+        fi
+    fi
+
     # copy the .env from the existing install over to the new path
     output "Copying existing config to new version"
     cp ${COPYFROMPATH}/.env ${LOCAL_PATH}/${WEBAPP_SUBDIR}/.env
@@ -2169,7 +2228,13 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
 
         echo "[LL] reloading pm2"
         service pm2-${LOCAL_USER} reload
+    fi
 
+
+    # migration logic
+    if [[ $DO_MIGRATIONS == true ]]; then
+        cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}
+        yarn migrate
     fi
 
 
@@ -2250,7 +2315,16 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         rm -R /tmp/devops
     fi
 
-    git clone https://github.com/LearningLocker/devops devops
+    apt-get -y install awscli redis-tools mongodb-clients
+
+    while true; do
+        git clone https://github.com/LearningLocker/devops devops
+        if [[ ! -d devops ]]; then
+            output_log "no devops dir after git - problem"
+        else
+            break
+        fi
+    done
     cd devops
 
     output "setting up env-fetch script"
@@ -2261,7 +2335,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
 
     # tweak nginx loader to load after the new startup script
     output "setting nginx to require the env fetch first"
-    sed -i "s/After=/After=ll_startup_env_fetch.service network.target/g" /lib/systemd/system/nginx.service
+    sed -i "s/After=/Requires=ll_startup_env_fetch.service\nAfter=/g" /lib/systemd/system/nginx.service
     systemctl daemon-reload
 
 
