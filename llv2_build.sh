@@ -488,7 +488,7 @@ function xapi_install ()
         # TODO - make this do a max itteration of say 3 attempts to clone
         while true; do
             output_log "attempting git clone for xapi"
-            git clone -q -b {XAPI_BRANCH} https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
+            git clone -q -b ${XAPI_BRANCH} https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
             if [[ ! -d ${XAPI_SUBDIR} ]]; then
                 output_log "git clone appears to have failed"
                 break
@@ -602,9 +602,9 @@ function setup_nginx_config ()
         return 0
     fi
 
-    UI_PORT=`fgrep UI_PORT $2 | tail -1 | sed -r 's/^UI_PORT(\s)?=(\s)?//' | sed 's/\r//' `
-    API_PORT=`fgrep API_PORT $2 | tail -1 | sed -r 's/^API_PORT(\s)?=(\s)?//' | sed 's/\r//' `
-    XAPI_PORT=`fgrep EXPRESS_PORT $3 | tail -1 | sed -r 's/^EXPRESS_PORT(\s)?=(\s)?//' | sed 's/\r//' `
+    UI_PORT=`egrep '^UI_PORT(\s)?=' $2 | tail -1 | sed -r 's/UI_PORT(\s)?=(\s)?//' | sed 's/\r//' `
+    API_PORT=`egrep '^API_PORT(\s)?=' $2 | tail -1 | sed -r 's/API_PORT(\s)?=(\s)?//' | sed 's/\r//' `
+    XAPI_PORT=`egrep '^EXPRESS_PORT(\s)?=' $3 | tail -1 | sed -r 's/EXPRESS_PORT(\s)?=(\s)?//' | sed 's/\r//' `
 
     output_log "nginx - setting ui port to $UI_PORT"
     output_log "nginx - setting api port to $API_PORT"
@@ -797,7 +797,7 @@ function debian_redis ()
 function debian_clamav ()
 {
     output "Installing ClamAV...." true
-    apt-get -y -qq install clamav >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    apt-get -y -qq install clamav clamav-daemon >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
     CLAM_INSTALLED=true
 }
@@ -860,7 +860,7 @@ function redhat_clamav ()
 function redhat_install ()
 {
     output "installing base software...." true
-    yum -y install curl git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    yum -y install curl wget git python make automake gcc gcc-c++ kernel-devel xorg-x11-server-Xvfb git-core >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     if [[ ! `command -v pwmake` ]]; then
