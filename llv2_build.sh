@@ -1246,7 +1246,7 @@ if [[ $GIT_ASK == true ]]; then
                     c="y"
                 fi
                 output_log "user entered '${c}'"
-                if [[ $c == "y" ]]; then
+                if [[ $c == "y" ]] || [[ $c == "Y" ]]; then
                     GIT_BRANCH=$n
                     break 2
                 elif [[ $c == "n" ]]; then
@@ -2122,7 +2122,7 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     if [[ -f $O_V_FILE ]]; then
         CUR_VER=`cat ${O_V_FILE}`
         if [[ $CUR_VER != "" ]]; then
-            if [[ `cat $CUR_VAR | grep "^2.0" | wc -l` -eq 0 ]]; then
+            if [[ `echo $CUR_VAR | grep "^2.0" | wc -l` -eq 0 ]]; then
                 DO_MIGRATIONS=true
             fi
         fi
