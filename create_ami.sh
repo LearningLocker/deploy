@@ -543,6 +543,7 @@ for REGION in $REGIONS; do
             fi
         done
     else
+        ec2-create-tags $AMI_ID --region $REGION -O $AWS_S3_ACCESS_KEY -W $AWS_S3_SECRET_KEY --tag Name="${AMI_DESC}" 2>/dev/null
         echo "[*] leaving AMI private"
     fi
 done
