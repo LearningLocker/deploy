@@ -2335,7 +2335,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
 
     # tweak nginx loader to load after the new startup script
     output "setting nginx to require the env fetch first"
-    sed -i "s/After=/After=ll_startup_env_fetch.service network.target/g" /lib/systemd/system/nginx.service
+    sed -i "s/After=/Requires=ll_startup_env_fetch.service\nAfter=/g" /lib/systemd/system/nginx.service
     systemctl daemon-reload
 
 
