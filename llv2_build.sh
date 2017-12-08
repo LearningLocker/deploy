@@ -2232,9 +2232,24 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
 
 
     # migration logic
+    DONE_MIGRATIONS=false
     if [[ $DO_MIGRATIONS == true ]]; then
-        cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}
-        yarn migrate
+        echo "[LL] We need to perform some migrations on your setup. This can take some time to run and can be run manually by running"
+        echo "     'cd ${LOCAL_PATH}/${WEBAPP_SUBDIR} && yarn migrate'"
+        echo "     If you don't have a valid config yet please skip this step. Do you want to run migrations ? [y|n] (press enter for default of 'y')"
+        while true; do
+            read -r -s -n 1 c
+            if [[ $c == "y" ]] || [[ $c == "Y" ]] || [[ $c == "" ]]; then
+                output "running yarn migrate...."
+                cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}
+                yarn migrate
+                output "done!"
+                DONE_MIGRATIONS=true
+                break
+            elif [[ $c == "n"]] || [[$c == "N" ]]; then
+                break
+            fi
+        done
     fi
 
 
@@ -2367,3 +2382,17 @@ elif [[ $SETUP_AMI == true ]]; then
     output " where visibility is 'public' or 'private' & region is the AWS region name ie: us-east-1"
     echo
 fi
+
+
+if [[ $DONE_MIGRATIONS == false ]]; then
+    output_log "Printing migration warning"
+    echo "[LL] Note about migrations:"
+    echo "     If you're upgrading from an existing install, no matter if this is on a new server or the same one you will have to perform migrations."
+    echo "     These migrations take care of cleaning up the database to support new functionality and can be run before you switch to the new release"
+    echo "     as they're non-distructive but they will need to be run for things to function correctly. If you're updating an existing install on this"
+    echo "     server you should've been prompted to run the migrations. If you chose to not run them or are upgrading by rolling out a new server"
+    echo "     you'll need to do this manually. This can be done by running 'cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}; yarn migrate'"
+    echo
+fi
+
+output "Everything done. Please check the install log in '${OUTPUT_LOG}' for errors."
