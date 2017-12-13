@@ -2331,7 +2331,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     #fi
 
     output "Installing awscli & mongo/redis tools"
-    apt-get -y -qq install awscli redis-tools mongodb-clients
+    apt-get -y -qq install awscli redis-tools mongodb-clients >> $OUTPUT_LOG 2>>$ERROR_LOG
 
     while true; do
         git clone https://github.com/LearningLocker/devops /tmp/devops
@@ -2364,7 +2364,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         # install awslogs
         output "installing cloudwatch tools"
         cd /tmp
-        apt-get install -y -qq libyaml-dev
+        apt-get install -y -qq libyaml-dev python-dev python-pip >> $OUTPUT_LOG 2>>$ERROR_LOG
         curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
         curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/AgentDependencies.tar.gz -O
         tar xvf AgentDependencies.tar.gz -C /tmp/
