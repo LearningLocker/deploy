@@ -2326,21 +2326,22 @@ fi
 # Enterprise AMI specific stuff
 if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     # check required dirs
-    if [[ -d /tmp/devops ]]; then
-        rm -R /tmp/devops
-    fi
+    #if [[ -d /tmp/devops ]]; then
+    #    rm -R /tmp/devops
+    #fi
 
-    apt-get -y install awscli redis-tools mongodb-clients
+    output "Installing awscli & mongo/redis tools"
+    apt-get -y -qq install awscli redis-tools mongodb-clients
 
     while true; do
-        git clone https://github.com/LearningLocker/devops devops
+        git clone https://github.com/LearningLocker/devops /tmp/devops
         if [[ ! -d devops ]]; then
             output_log "no devops dir after git - problem"
         else
             break
         fi
     done
-    cd devops
+    cd /tmp/devops
 
     output "setting up env-fetch script"
     cp startup_env_fetch.sh /usr/sbin/ll_startup_env_fetch.sh
@@ -2352,6 +2353,31 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     output "setting nginx to require the env fetch first"
     sed -i "s/After=/Requires=ll_startup_env_fetch.service\nAfter=/g" /lib/systemd/system/nginx.service
     systemctl daemon-reload
+
+    # load in the aws logs stuff
+    if [[ -f /tmp/devops/awslogs/awslogs.conf ]]; then
+        # figure out the current AWS region
+        EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
+        REGION="`echo \"$EC2_AVAIL_ZONE\" | sed -e 's:\([0-9][0-9]*\)[a-z]*\$:\\1:'`"
+        output "determined aws region to be '${REGION}'"
+
+        # install awslogs
+        output "installing cloudwatch tools"
+        cd /tmp
+        apt-get install -y -qq libyaml-dev
+        curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
+        curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/AgentDependencies.tar.gz -O
+        tar xvf AgentDependencies.tar.gz -C /tmp/
+        python ./awslogs-agent-setup.py --region $REGION --dependency-path /tmp/AgentDependencies -n -c /tmp/devops/awslogs/awslogs.conf
+    else
+        output "No awslogs.conf so can't set up cloudfront"
+    fi
+
+    # copy the devops folder to a local dir
+    if [[ ! -d /usr/local/learninglocker ]]; then
+        mkdir -p /usr/local/learninglocker
+    fi
+    cp -R /tmp/devops /usr/local/learninglocker/
 
 
 # open-source AMI stuff
