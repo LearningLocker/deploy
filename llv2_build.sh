@@ -1131,7 +1131,7 @@ SETUP_AMI=false         # if -y is set to '5' then we bypass all questions, don'
 ENTERPRISE=false        # if true then do things specific to enterprise (ie: don't set up mongo or redis).
                         # this is designed to be mostly the same as the OS model so search for this variable to see differences
                         # Can be set with '-e 1' as a command line param - you'll need to have github access to the private repos for it to work
-
+ENTERPRISE_IGNORE_STARTUP=false
 
 
 #################################################################################
@@ -1195,7 +1195,7 @@ while getopts ":h:y:b:x:e:" OPT; do
     case "$OPT" in
         h)
             show_help
-            ;;
+        ;;
         y)
             JUSTDOIT=true
             if [[ $OPTARG == "2" ]]; then
@@ -1211,18 +1211,21 @@ while getopts ":h:y:b:x:e:" OPT; do
                 BYPASSALL=true
                 SETUP_AMI=true
             fi
-            ;;
+        ;;
         b)
             GIT_BRANCH=$OPTARG
-            ;;
+        ;;
         x)
             XAPI_BRANCH=$OPTARG
-            ;;
+        ;;
         e)
             if [[ $OPTARG == "1" ]]; then
                 ENTERPRISE=true
+            elif [[ $OPTARG == "2" ]]; then
+                ENTERPRISE_IGNORE_STARTUP=true
+                ENTERPRISE=true
             fi
-            ;;
+        ;;
     esac
 done
 
@@ -2246,7 +2249,7 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
                 output "done!"
                 DONE_MIGRATIONS=true
                 break
-            elif [[ $c == "n"]] || [[$c == "N" ]]; then
+            elif [[ $c == "n" ]] || [[ $c == "N" ]]; then
                 break
             fi
         done
@@ -2330,8 +2333,9 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     #    rm -R /tmp/devops
     #fi
 
-    output "Installing awscli & mongo/redis tools"
-    apt-get -y -qq install awscli redis-tools mongodb-clients >> $OUTPUT_LOG 2>>$ERROR_LOG
+    output "Installing awscli & mongo/redis tools...." true
+    apt-get -y -qq install awscli redis-tools mongodb-clients >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
 
     while true; do
         git clone https://github.com/LearningLocker/devops /tmp/devops
@@ -2343,16 +2347,18 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     done
     cd /tmp/devops
 
-    output "setting up env-fetch script"
-    cp startup_env_fetch.sh /usr/sbin/ll_startup_env_fetch.sh
-    chmod 755 /usr/sbin/ll_startup_env_fetch.sh
-    cp startup_env_fetch.service /lib/systemd/system/ll_startup_env_fetch.service
-    systemctl enable ll_startup_env_fetch
+    if [[ $ENTERPRISE_IGNORE_STARTUP == false ]]; then
+        output "setting up env-fetch script"
+        cp startup_env_fetch.sh /usr/sbin/ll_startup_env_fetch.sh
+        chmod 755 /usr/sbin/ll_startup_env_fetch.sh
+        cp startup_env_fetch.service /lib/systemd/system/ll_startup_env_fetch.service
+        systemctl enable ll_startup_env_fetch
 
-    # tweak nginx loader to load after the new startup script
-    output "setting nginx to require the env fetch first"
-    sed -i "s/After=/Requires=ll_startup_env_fetch.service\nAfter=/g" /lib/systemd/system/nginx.service
-    systemctl daemon-reload
+        # tweak nginx loader to load after the new startup script
+        output "setting nginx to require the env fetch first"
+        sed -i "s/After=/Requires=ll_startup_env_fetch.service\nAfter=/g" /lib/systemd/system/nginx.service
+        systemctl daemon-reload
+    fi
 
     # load in the aws logs stuff
     if [[ -f /tmp/devops/awslogs/awslogs.conf ]]; then
@@ -2362,9 +2368,13 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         output "determined aws region to be '${REGION}'"
 
         # install awslogs
-        output "installing cloudwatch tools"
         cd /tmp
-        apt-get install -y -qq libyaml-dev python-dev python-pip >> $OUTPUT_LOG 2>>$ERROR_LOG
+
+        output "Installing required tools for cloudwatch...." true
+        apt-get install -y -qq libyaml-dev python-dev python-pip >> $OUTPUT_LOG 2>>$ERROR_LOG &
+        print_spinner true
+
+        output "installing cloudwatch tools...."
         curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
         curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/AgentDependencies.tar.gz -O
         tar xvf AgentDependencies.tar.gz -C /tmp/
@@ -2378,6 +2388,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         mkdir -p /usr/local/learninglocker
     fi
     cp -R /tmp/devops /usr/local/learninglocker/
+    cd /tmp
 
 
 # open-source AMI stuff
