@@ -126,10 +126,17 @@ done
 if [[ $AMI_NAME != "" ]]; then
     CLI_VARS=true
 
-    # use defaults if needed
+    # no aws region passed in - attempt to get the current region. Fall back to the default if needs be
     if [[ $AWS_REGION == "" ]]; then
-        AWS_REGION=$DEFAULT_REGION
+        EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
+        AWS_REGION="`echo \"$EC2_AVAIL_ZONE\" | sed -e 's:\([0-9][0-9]*\)[a-z]*\$:\\1:'`"
+        # fallback to default
+        if [[ $AWS_REGION == "" ]]; then
+            AWS_REGION=$DEFAULT_REGION
+        fi
     fi
+
+    # use default prefix if needed
     if [[ $BUCKET_PREFIX == "" ]]; then
         BUCKET_PREFIX=$DEFAULT_BUCKET_PREFIX
     fi
@@ -232,6 +239,9 @@ fi
 #########################################################################################################
 if [[ $OS_VERSION == "Ubuntu" ]]; then
     OS_USER=ubuntu
+
+    # set up byobu for the user
+    su - ubuntu -c "byobu-ctrl-a screen"
 fi
 # get IP address for use in uploading required certs
 EC2_IPADDR="`wget -q -O - http://169.254.169.254/latest/meta-data/public-ipv4 || die \"can\'t get Public IP address $?\"`"
