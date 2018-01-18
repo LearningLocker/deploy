@@ -314,7 +314,8 @@ if [[ $OS_VERSION == "Ubuntu" ]]; then
     print_spinner true
 
     echo "[*] running dist-upgrade...."
-    apt-get dist-upgrade
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get -y dist-upgrade
     #print_spinner true
 
     echo -n "[*] installing required software...."
