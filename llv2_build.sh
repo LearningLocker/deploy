@@ -379,9 +379,17 @@ function base_install ()
     # check if git is too far out of date
     GIT_VERSION=`git --version | awk '{print $3}'`
     MIN_GIT_VERSION="1.7.10"
+    MIN_GIT_VERSION_4PT="1.7.10.0"
     output "Git version: ${GIT_VERSION}, minimum: $MIN_GIT_VERSION"
     version_check $GIT_VERSION $MIN_GIT_VERSION
     VCHK=$?
+    RV=`echo $GIT_VERSION | awk -F "." '{print NF-1}'`
+    if [[ $VCHK == 2 ]] && [[ $RV -gt 3 ]]; then
+        # stupid double check here but pre-v2 of git had some 4-point releases which won't match the above
+        version_check $GIT_VERSION $MIN_GIT_VERSION_4PT
+        VCHK=$?
+    fi
+
     if [[ $VCHK == 2 ]]; then
         output "Sorry but your version of git is too old. You should be running a minimum of $MIN_GIT_VERSION"
         exit 0
