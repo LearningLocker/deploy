@@ -11,6 +11,7 @@
 #    export AWS_AUTH_SECRET=
 #    export AWS_AUTH_KEY=
 #    export AWS_ACCOUNT_ID=007712106137
+#    export AWS_KEYFILES_PATH=/etc/ht2keys
 #
 # TODO
 #   Make sure we can read the keyfiles - if we can't, we shouldn't even spin up a server
@@ -24,6 +25,7 @@
 # pip install paramiko
 # pip install argparse
 # pip install boto3
+# pip install ubuntufinder
 
 import os
 import sys
@@ -33,6 +35,7 @@ import paramiko
 import boto3
 from botocore.exceptions import ClientError
 from multiprocessing import Process
+import ubuntufinder
 
 
 # List of AWS supported regions
@@ -79,64 +82,16 @@ def get_region_list ():
 def validate_region (region, distro_version):
     # ami ids
     ami_id = False
-    if distro_version == "16.04":       # 16.04
-        if region == "us-east-1":           # us-east-1
-            ami_id = "ami-d651b8ac"
-        elif region == "us-east-2":         # us-east-2
-            ami_id = "ami-9686a4f3"
-        elif region == "us-west-1":         # us-west-1
-            ami_id = "ami-2d5c6d4d"
-        elif region == "us-west-2":         # us-west-2
-            ami_id = "ami-ecc63a94"
-        elif region == "ca-central-1":      # ca-central
-            ami_id = "ami-e59c2581"
-        elif region == "eu-west-1":         # Ireland
-            ami_id = "ami-17d11e6e"
-        elif region == "eu-central-1":      # Frankfurt
-            ami_id = "ami-5a922335"
-        elif region == "eu-west-2":         # London
-            ami_id = "ami-e1f2e185"
-        elif region == "ap-southeast-1":    # Singapore
-            ami_id = "ami-e6d3a585"
-        elif region == "ap-southeast-2":    # Sydney
-            ami_id = "ami-391ff95b"
-        elif region == "ap-northeast-2":    # Seoul
-            ami_id = "ami-0f6fb461"
-        elif region == "ap-northeast-1":    # Tokyo
-            ami_id = "ami-8422ebe2"
-        elif region == "ap-south-1":        # Mumbai
-            ami_id = "ami-08a5e367"
-        elif region == "sa-east-1":         # Sao Paulo
-            ami_id = "ami-a3e39ecf"
-    elif distro_version == "17.04":     # 17.04
-        if region == "us-east-1":           # us-east-1
-            ami_id = "ami-29976653"
-        elif region == "us-east-2":         # us-east-2
-            ami_id = "ami-44496421"
-        elif region == "us-west-1":         # us-west-1
-            ami_id = "ami-67aa9b07"
-        elif region == "us-west-2":         # us-west-2
-            ami_id = "ami-70728c08"
-        elif region == "ca-central-1":      # ca-central
-            ami_id = "ami-e370c987"
-        elif region == "eu-west-1":         # Ireland
-            ami_id = "ami-5cc00825"
-        elif region == "eu-central-1":      # Frankfurt
-            ami_id = "ami-425ded2d"
-        elif region == "eu-west-2":         # London
-            ami_id = "ami-e2bba886"
-        elif region == "ap-southeast-1":    # Singapore
-            ami_id = "ami-947d0ef7"
-        elif region == "ap-southeast-2":    # Sydney
-            ami_id = "ami-8505e4e7"
-        elif region == "ap-northeast-2":    # Seoul
-            ami_id = "ami-e2a9738c"
-        elif region == "ap-northeast-1":    # Tokyo
-            ami_id = "ami-894983ef"
-        elif region == "ap-south-1":        # Mumbai
-            ami_id = "ami-b42869db"
-        elif region == "sa-east-1":         # Sao Paulo
-            ami_id = "ami-724f331e"
+
+    print(region + ":" + distro_version)
+
+    try:
+        # hard-setting to ebs and amd64 as that's all we need
+        image = ubuntufinder.find_image(region, distro_version, "amd64", "ebs-ssd")
+        ami_id = image.ami_id
+    except:
+        print("couldn't find a suitable AMI id")
+        return
 
     if ami_id == False:
         print("FATAL: couldn't find ami_id for ubuntu " + distro_version + " in " + region + " - maybe this script needs updating with new starting AMIs")
@@ -208,7 +163,7 @@ ami_datasets = []
 aws_key = False
 aws_secret = False
 aws_regions = False
-distro_version = "16.04"
+distro_version = "xenial"           # must be 'xenial' rather than '16.04'
 build_name = "ll_py_build"
 instance_size = "t2.small"
 keyfile_path = "/etc/ht2keys/"
