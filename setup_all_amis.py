@@ -59,38 +59,25 @@ import ubuntufinder
 ################################################################
 # FUNCTIONS
 ################################################################
-def get_region_list ():
-    list = [
-                'us-east-1',
-                'us-east-2',
-                'us-west-1',
-                'us-west-2',
-                'ca-central-1',
-                'eu-west-1',
-                'eu-central-1',
-                'eu-west-2',
-                'ap-southeast-1',
-                'ap-southeast-2',
-                'ap-northeast-2',
-                'ap-northeast-1',
-                'ap-south-1',
-                'sa-east-1'
-            ]
-    return list
+def get_region_list (ec2):
+    # Retrieves all regions/endpoints that work with EC2
+    response = ec2.describe_regions()
+    regionList = []
+    for i in response['Regions']:
+        regionList.append(i['RegionName'])
+    return regionList 
 
 
 def validate_region (region, distro_version):
     # ami ids
     ami_id = False
 
-    print(region + ":" + distro_version)
-
     try:
         # hard-setting to ebs and amd64 as that's all we need
         image = ubuntufinder.find_image(region, distro_version, "amd64", "ebs-ssd")
         ami_id = image.ami_id
     except:
-        print("couldn't find a suitable AMI id")
+        print("couldn't find a suitable AMI id for distro:" + distro_version + " region:" + region)
         return
 
     if ami_id == False:
@@ -102,7 +89,7 @@ def validate_region (region, distro_version):
     kp = "llbuild-" + region    # default KP name
 
     # output
-    print("region: " + region + "; ami_id: " + ami_id + "; SG: " + secgroup + "; KP: " + kp)
+    #print("region: " + region + "; ami_id: " + ami_id + "; SG: " + secgroup + "; KP: " + kp)
     return {"kp":kp, "sg": secgroup, "ami_id": ami_id, "region": region}
 
 
@@ -250,16 +237,18 @@ else:
 
 
 # regions
+ec2 = boto3.client("ec2", region_name="eu-west-1", aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
 
 # 'all'
 aws_regions = False
 if args.complete:
-    aws_regions = get_region_list()
+    aws_regions = get_region_list(ec2)
 elif not args.regions or len(args.regions) < 5:
     print("FATAL: no regions passed in")
     sys.exit()
 else:
     aws_regions = args.regions.split(",")
+
 
 if aws_regions:
     for region in aws_regions:
@@ -288,7 +277,6 @@ while True:
 # SPIN UP AMIs
 ################################################################
 
-ec2 = boto3.client("ec2", region_name=region)
 
 # check keypair & security groups exist in every region we want to launch in
 #print("Checking keypair and security group data")
