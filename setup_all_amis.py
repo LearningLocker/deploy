@@ -5,27 +5,16 @@
 # USAGE:
 #    python setup_all_amis.py -r REGION_LIST -n NAME -d DESCRIPTION -k AWS_KEY -s AWS_SECRET -a AWS_ACCOUNT_ID
 #    python setup_all_amis.py -r us-west-1,us-east-1,eu-west-1 -n "ll v2 2.0.3" -d "Learning Locker 2.0.3 from HT2 Labs" -k abc -s bcd/hyt -a 000836383
-#    python setup_all_amis.py -c 1 -n "Learning Locker 2.0.5-1 from HT2 Labs" -d "Learning Locker 2.0.5 from HT2 Labs"
-#
-# ENVVARS
-#    export AWS_AUTH_SECRET=
-#    export AWS_AUTH_KEY=
-#    export AWS_ACCOUNT_ID=007712106137
-#    export AWS_KEYFILES_PATH=/etc/ht2keys
 #
 # TODO
-#   Make sure we can read the keyfiles - if we can't, we shouldn't even spin up a server
-#   run boto3 check on aws credentials as it uses ~/.aws/credentials
+#   ebs volume size of instances
 #   validate key / sg exists
 #   move validate_region() data to a file
 #
 # REQUIREMENTS
-# apt-get install awscli
-# set up AWS tools - http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 # pip install paramiko
 # pip install argparse
 # pip install boto3
-# pip install ubuntufinder
 
 import os
 import sys
@@ -65,7 +54,7 @@ def get_region_list (ec2):
     regionList = []
     for i in response['Regions']:
         regionList.append(i['RegionName'])
-    return regionList 
+    return regionList
 
 
 def validate_region (region, distro_version):
@@ -93,10 +82,13 @@ def validate_region (region, distro_version):
     return {"kp":kp, "sg": secgroup, "ami_id": ami_id, "region": region}
 
 
-def run_on_server (hostname, region, port, username, keyfile, name, desc, enterprise_mode):
+
+def run_on_server (hostname, region, port, username, keyfile, name, desc):
     global account_id
     global aws_key
     global aws_secret
+    global main_branch
+    global xapi_branch
 
     try:
         client = paramiko.SSHClient()
@@ -121,10 +113,7 @@ def run_on_server (hostname, region, port, username, keyfile, name, desc, enterp
         chk = stdout.read()
 
         print(hostname + " getting & running deploy script")
-        estr = ""
-        if enterprise_mode == True:
-            estr = " -e 1"
-        stdin, stdout, stderr = client.exec_command("curl -o- -L http://lrnloc.kr/installv2 > deployll.sh && sudo bash deployll.sh -y 5" + estr)
+        stdin, stdout, stderr = client.exec_command("curl -o- -L http://lrnloc.kr/installv2 > deployll.sh && sudo bash deployll.sh -y 5 " + main_branch + " " + xapi_branch)
         chk = stdout.read()
 
         print(hostname + " running AMI build script")
@@ -150,11 +139,11 @@ ami_datasets = []
 aws_key = False
 aws_secret = False
 aws_regions = False
-distro_version = "xenial"           # must be 'xenial' rather than '16.04'
+distro_version = "xenial"
 build_name = "ll_py_build"
 instance_size = "t2.small"
 keyfile_path = "/etc/ht2keys/"
-enterprise_mode = False
+default_region = "eu-west-1"
 
 
 ################################################################
@@ -170,10 +159,20 @@ parser.add_argument("-a", "--account",      type=int,   help="AWS Account ID")
 parser.add_argument("-v", "--visibility",               help="visibility (public or private)")
 parser.add_argument("-p", "--keypath",                  help="Path to the AWS keys")
 parser.add_argument("-c", "--complete",                 help="complete region list")
-parser.add_argument("-e", "--enterprise",               help="enterprise mode (set to 1 to enable)")
+parser.add_argument("-b", "--branch",                   help="branch/tag of the main learninglocker repo")
+parser.add_argument("-x", "--xapi",                     help="branch/tag of the xapi repo")
+parser.add_argument("-u", "--ubuntu",                   help="Name of the ubuntu version to use - ie: 'zesty'. Defaults to '" + distro_version + "'")
 args = parser.parse_args()
 
 # validate vars
+
+main_branch = ""
+if args.branch and len(args.branch) > 2:
+    main_branch = "-b " + args.branch
+
+xapi_branch = ""
+if args.xapi and len(args.xapi) > 2:
+    xapi_branch = "-x " + args.xapi
 
 # name
 if not args.name or len(args.name) < 4:
@@ -207,14 +206,6 @@ if not args.account:
 else:
     account_id = args.account
 
-# path to the keys
-if os.environ['AWS_KEYFILES_PATH']:
-    keyfile_path = os.environ['AWS_KEYFILES_PATH']
-
-# enterprise
-if args.enterprise == 1:
-    enterprise_mode = True
-
 # key
 if not args.key or len(args.key) < 10:
     if 'AWS_AUTH_KEY' in os.environ and len(os.environ['AWS_AUTH_KEY']) > 10:
@@ -235,20 +226,23 @@ if not args.secret or len(args.secret) < 10:
 else:
     aws_secret = args.secret
 
+# ubuntu version
+if args.ubuntu and len(args.ubuntu) > 4:
+    distro_version = args.ubuntu
+
 
 # regions
-ec2 = boto3.client("ec2", region_name="eu-west-1", aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
+ec2 = boto3.client("ec2", region_name=default_region, aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
 
 # 'all'
 aws_regions = False
-if args.complete:
+if args.regions and len(args.regions) > 5:
+    aws_regions = args.regions.split(",")
+elif args.complete and args.complete == "1":
     aws_regions = get_region_list(ec2)
-elif not args.regions or len(args.regions) < 5:
+else:
     print("FATAL: no regions passed in")
     sys.exit()
-else:
-    aws_regions = args.regions.split(",")
-
 
 if aws_regions:
     for region in aws_regions:
@@ -263,7 +257,8 @@ print("AWS Account ID      : " + repr(account_id))
 print("AWS x509 Key        : " + aws_key)
 print("AWS x509 Secret     : " + aws_secret)
 print("AWS regions         : " + repr(aws_regions))
-print("Enterprise mode     : " + repr(enterprise_mode))
+print("LL Branch           : " + repr(args.branch))
+print("Xapi Branch         : " + repr(args.xapi))
 #print("AWS ami ids         : " + repr(ami_ids))
 print("Warning - the security groups and keypairs must be set up in advance in validate_regions() or things WILL break")
 
@@ -357,7 +352,7 @@ while True:
 print("[*] All servers alive")
 
 # sleep for 2 mins - this is just to make damn sure everything is working. AWS is a bit weird
-sleeptime = 60
+sleeptime = 20
 print("[*] Sleeping for " + repr(sleeptime) + " seconds to make sure the servers are running and not mis-reporting")
 time.sleep(sleeptime)
 
@@ -376,7 +371,7 @@ if __name__ == '__main__':
         # get keyfile
         ssh_keyfile = keyfile_path + instance_data['kp'] + ".pem"
 
-        p = Process(target=run_on_server, args=(hostname, instance_data['region'], 22, 'ubuntu', ssh_keyfile, ami_name, ami_desc, enterprise_mode))
+        p = Process(target=run_on_server, args=(hostname, instance_data['region'], 22, 'ubuntu', ssh_keyfile, ami_name, ami_desc))
         p.start()
         threads.append(p)
 
