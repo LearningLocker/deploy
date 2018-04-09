@@ -34,6 +34,14 @@ function yum_package ()
 # GENERIC FUNCTIONS IRRESPECTIVE OF OS  #
 #########################################
 
+# simple function to symlink useful commands
+function symlink_commands ()
+{
+    ouput_log "setting up symlink commands"
+    alias ll-pm2-logs="su - ${LOCAL_USER} -c 'pm2 logs'"
+}
+
+
 function determine_os_version ()
 {
     VERSION_FILE=/etc/issue.net
@@ -2112,6 +2120,8 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output "  cd ${LOCAL_PATH}; node cli/dist/server createSiteAdmin {your.email@address.com} {organisationName} {yourPassword}"
         echo
     fi
+
+    symlink_commands
 
     show_install_end_text
 
