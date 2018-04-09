@@ -1543,7 +1543,7 @@ while true; do
         if [[ $FORCE_MONGO_NOINSTALL == true ]]; then
             MONGO_INSTALL=false
             output_log "forcing not installing mongodb"
-        elif [[ `command -v mongod` ]] then
+        elif [[ `command -v mongod` ]]; then
             output "MongoDB is already installed, not installing"
             CUR_MONGO_VERSION=`mongod --version | grep "db version" | sed "s?db version v??"`
             output_log "mongo version currently installed: $CUR_MONGO_VERSION"
