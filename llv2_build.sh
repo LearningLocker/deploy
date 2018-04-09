@@ -1141,8 +1141,8 @@ MONGO_INSTALLED=false
 REDIS_INSTALLED=false
 PM2_OVERRIDE=false
 NODE_OVERRIDE=false
-NODE_VERSION=8.x
-NODE_VERSION_STRING=v8
+NODE_VERSION=6.x
+NODE_VERSION_STRING=v6
 UPDATE_MODE=false
 GIT_ASK=false
 GIT_REV=false
@@ -1562,7 +1562,7 @@ while true; do
         if [[ $FORCE_MONGO_NOINSTALL == true ]]; then
             MONGO_INSTALL=false
             output_log "forcing not installing mongodb"
-        elif [[ `command -v mongod` ]] then
+        elif [[ `command -v mongod` ]]; then
             output "MongoDB is already installed, not installing"
             CUR_MONGO_VERSION=`mongod --version | grep "db version" | sed "s?db version v??"`
             output_log "mongo version currently installed: $CUR_MONGO_VERSION"
