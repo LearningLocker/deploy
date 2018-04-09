@@ -1138,6 +1138,8 @@ ENTERPRISE=false        # if true then do things specific to enterprise (ie: don
                         # this is designed to be mostly the same as the OS model so search for this variable to see differences
                         # Can be set with '-e 1' as a command line param - you'll need to have github access to the private repos for it to work
 ENTERPRISE_IGNORE_STARTUP=false
+FORCE_MONGO_NOINSTALL=false
+FORCE_REDIS_NOINSTALL=false
 
 
 #################################################################################
@@ -1197,7 +1199,7 @@ fi
 #################################################################################
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-while getopts ":h:y:b:x:e:" OPT; do
+while getopts ":h:y:b:x:e:m:r:" OPT; do
     case "$OPT" in
         h)
             show_help
@@ -1230,6 +1232,16 @@ while getopts ":h:y:b:x:e:" OPT; do
             elif [[ $OPTARG == "2" ]]; then
                 ENTERPRISE_IGNORE_STARTUP=true
                 ENTERPRISE=true
+            fi
+        ;;
+        m)
+            if [[ $OPTARG == "1" ]]; then
+                FORCE_MONGO_NOINSTALL=true
+            fi
+        ;;
+        r)
+            if [[ $OPTARG == "1" ]]; then
+                FORCE_REDIS_NOINSTALL=true
             fi
         ;;
     esac
@@ -1354,6 +1366,15 @@ while true; do
                 REDIS_INSTALL=true
                 REDIS_INSTALLED=true
             fi
+            if [[ $FORCE_MONGO_NOINSTALL == true ]]; then
+                output "forcing no mongo install"
+                MONGO_INSTALL=false
+            fi
+            if [[ $FORCE_REDIS_NOINSTALL == true ]]; then
+                output "forcing no redis install"
+                REDIS_INSTALL=false
+            fi
+
             output "automated setup"
             output "release path: $RELEASE_PATH"
             output "symlink path: $SYMLINK_PATH"
@@ -1511,7 +1532,10 @@ while true; do
 
 
         # check mongo
-        if [[ `command -v mongod` ]]; then
+        if [[ $FORCE_MONGO_NOINSTALL == true ]]; then
+            MONGO_INSTALL=false
+            output_log "forcing not installing mongodb"
+        elif [[ `command -v mongod` ]] then
             output "MongoDB is already installed, not installing"
             CUR_MONGO_VERSION=`mongod --version | grep "db version" | sed "s?db version v??"`
             output_log "mongo version currently installed: $CUR_MONGO_VERSION"
@@ -1546,7 +1570,10 @@ while true; do
         fi
 
         # check redis
-        if [[ `command -v redis-server` ]]; then
+        if [[ $FORCE_REDIS_INSTALL == false ]]; then
+            REDIS_INSTALL=false
+            output_log "forcing not installing redis"
+        elif [[ `command -v redis-server` ]]; then
             output "Redis is already installed, not installing"
             CUR_REDIS_VERSION=`redis-server --version | awk '{print $3}' | sed 's/v=//'`
             output_log "Redis Version: $CUR_REDIS_VERSION"
@@ -1613,7 +1640,6 @@ done
 if [[ $PACKAGE_INSTALL == true ]]; then
     echo "PACKAGE QUESTIONS GO HERE"
 fi
-
 
 
 #################################################################################
