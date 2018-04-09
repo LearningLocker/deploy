@@ -685,7 +685,16 @@ function debian_install ()
         fi
     fi
 
+    INSTALL_NODE=false
     if [[ ! `command -v nodejs` ]]; then
+        INSTALL_NODE=true
+        output_log "installing nodejs"
+    elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+        INSTALL_NODE=true
+        output_log "updating nodejs"
+    fi
+
+    if [[ $INSTALL_NODE == true ]]; then
         curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG
         apt-get -y -qq install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
@@ -884,7 +893,16 @@ function redhat_install ()
         fi
     fi
 
+    INSTALL_NODE=false
     if [[ ! `command -v nodejs` ]]; then
+        output_log "installing node"
+        INSTALL_NODE=true
+    elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+        output_log "updating node"
+        INSTALL_NODE=true
+    fi
+
+    if [[ $INSTALL_NODE == true ]]; then
         output "setting up nodejs repo...." true
         curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG &
         print_spinner true
@@ -1124,6 +1142,7 @@ REDIS_INSTALLED=false
 PM2_OVERRIDE=false
 NODE_OVERRIDE=false
 NODE_VERSION=6.x
+NODE_VERSION_STRING=v6
 UPDATE_MODE=false
 GIT_ASK=false
 GIT_REV=false
