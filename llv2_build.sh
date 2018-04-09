@@ -668,8 +668,13 @@ function debian_install ()
     fi
 
     if [[ ! `command -v python` ]]; then
-        output "Something seems to have gone wrong in installing basic software - exiting"
-        exit 0
+        if [[ `command -v python3` ]]; then
+            output "Symlinking python3 to python for Yarn"
+            ln -s `command -v python3` /usr/bin/python
+        else
+            output "Something seems to have gone wrong in installing basic software, can't find python or python3 - exiting"
+            exit 0
+        fi
     fi
 
     if [[ ! `command -v nodejs` ]]; then
@@ -694,16 +699,6 @@ function debian_install ()
         apt-get -y -qq install yarn >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
         output "yarn already installed"
-    fi
-
-    if [[ ! `command -v python` ]]; then
-        if [[ `command -v python3` ]]; then
-            output "Symlinking python3 to python for Yarn"
-            ln -s `command -v python3` /usr/bin/python
-        else
-            output "FATAL Error - can't find python. Path: ${PATH} EUID:${EUID}"
-            exit 0
-        fi
     fi
 }
 
@@ -968,6 +963,9 @@ function redhat_nginx ()
     fi
 
 
+    if [[ ! -d /etc/nginx/conf.d ]]; then
+        mkdir -p /etc/nginx/conf.d
+    fi
     NGINX_CONFIG=/etc/nginx/conf.d/learninglocker.conf
     XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
     BASE_ENV=${PWD}/${WEBAPP_SUBDIR}/.env
