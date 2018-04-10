@@ -37,7 +37,7 @@ function yum_package ()
 # simple function to symlink useful commands
 function symlink_commands ()
 {
-    ouput_log "setting up symlink commands"
+    output_log "setting up symlink commands"
     alias ll-pm2-logs="su - ${LOCAL_USER} -c 'pm2 logs'"
 }
 
