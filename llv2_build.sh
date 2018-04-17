@@ -652,6 +652,15 @@ function setup_nginx_enterprise ()
 }
 
 
+function find_clam_config ()
+{
+    CLAMD_CONFIG=/etc/clamd.conf
+    if [[ -f /etc/clamav/clamd.conf ]]; then
+        CLAMD_CONFIG=/etc/clamav/clamd.conf
+    fi
+}
+
+
 
 #################################################################################
 #                           DEBIAN / UBUNTU FUNCTIONS                           #
@@ -1407,9 +1416,9 @@ while true; do
             output "symlink path: $SYMLINK_PATH"
             output "user: $LOCAL_USER"
             # clamav
-            if [[ `command -v clamscan` ]]; then
+            if [[ `command -v clamdscan` ]]; then
                 output "ClamAV already installed"
-                CLAM_PATH=`command -v clamscan`
+                CLAM_PATH=`command -v clamdscan`
                 CLAM_INSTALLED=true
             else
                 CLAM_INSTALL=true
@@ -1635,9 +1644,9 @@ while true; do
 
 
         # check for clamAV
-        if [[ `command -v clamscan` ]]; then
+        if [[ `command -v clamdscan` ]]; then
             output "ClamAV already installed"
-            CLAM_PATH=`command -v clamscan`
+            CLAM_PATH=`command -v clamdscan`
             CLAM_INSTALLED=true
         else
             CLAM_INSTALLED=false
@@ -1875,7 +1884,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     # get the clamAV path if needed
     if [[ $CLAM_INSTALL == true ]]; then
-        CLAM_PATH=`command -v clamscan`
+        CLAM_PATH=`command -v clamdscan`
     fi
 
 
@@ -2002,7 +2011,9 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     # update the .env with the path to clamav
     if [[ $CLAM_INSTALLED == true ]]; then
-        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
+        sed -i "s?#CLAMDSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
+        find_clam_config
+        sed -i "s?#CLAMDSCAN_CONF=/etc/clamav/clamd.conf?CLAMSCAN_BINARY=${CLAMD_CONFIG}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
     fi
 
     # set up symlink
