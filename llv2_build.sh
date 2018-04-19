@@ -710,6 +710,9 @@ function debian_install ()
     elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         INSTALL_NODE=true
         output_log "updating nodejs"
+    else
+        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
     if [[ $INSTALL_NODE == true ]]; then
@@ -722,8 +725,11 @@ function debian_install ()
 
     INSTALLED_NODE_VERSION=`nodejs --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-        output "ERROR :: node doesn't seem to be installed - exiting"
-        exit 1
+        INSTALLED_NODE_VERSION=`node --version`
+        if [[ $INSTALLED_NODE_VERSION == "" ]]; then
+            output "ERROR :: node doesn't seem to be installed - exiting"
+            exit 1
+        fi
     fi
     output "node version - $INSTALLED_NODE_VERSION"
 
@@ -918,6 +924,9 @@ function redhat_install ()
     elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         output_log "updating node"
         INSTALL_NODE=true
+    else
+        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
     if [[ $INSTALL_NODE == true ]]; then
@@ -931,11 +940,13 @@ function redhat_install ()
         output "Node.js already installed"
     fi
 
-
-    INSTALLED_NODE_VERSION=`node --version`
+    INSTALLED_NODE_VERSION=`nodejs --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-        output "ERROR :: node doesn't seem to be installed - exiting"
-        exit 1
+        INSTALLED_NODE_VERSION=`node --version`
+        if [[ $INSTALLED_NODE_VERSION == "" ]]; then
+            output "ERROR :: node doesn't seem to be installed - exiting"
+            exit 1
+        fi
     fi
     output "node version - $INSTALLED_NODE_VERSION"
 
@@ -2434,10 +2445,10 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         DEVOPS_REPO=https://github.com/LearningLocker/devops /tmp/devops
 
         if [[ $GIT_USER != false ]]; then
-            DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/devops /tmp/devops
+            DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/devops
             output_log "Cloning devops repo with user: ${GIT_USER}"
         fi
-        git clone $DEVOPS_REPO
+        git clone $DEVOPS_REPO /tmp/devops
         if [[ $GIT_USER != false ]]; then
             history -c
         fi
