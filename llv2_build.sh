@@ -723,6 +723,12 @@ function debian_install ()
     fi
 
 
+    if [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+        output "Something went wrong in installing/updating nodejs. This is likely a fault in your apt config. Can't continue"
+        exit 0
+    fi
+
+
     INSTALLED_NODE_VERSION=`nodejs --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
         INSTALLED_NODE_VERSION=`node --version`
