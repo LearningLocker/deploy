@@ -412,7 +412,8 @@ function base_install ()
             if [[ $ENTERPRISE == true ]]; then
                 MAIN_REPO=https://github.com/LearningLocker/learninglocker_node
                 if [[ $GIT_USER != false ]]; then
-                    MAIN_REPO=https://${GIT_USER}:${GIT_PASS}github.com/LearningLocker/learninglocker_node
+                    MAIN_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/learninglocker_node
+                    output_log "Cloning main repo with user: ${GIT_USER}"
                 fi
             else
                 MAIN_REPO=https://github.com/LearningLocker/learninglocker
@@ -2430,7 +2431,16 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     print_spinner true
 
     while true; do
-        git clone https://github.com/LearningLocker/devops /tmp/devops
+        DEVOPS_REPO=https://github.com/LearningLocker/devops /tmp/devops
+
+        if [[ $GIT_USER != false ]]; then
+            DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/devops /tmp/devops
+            output_log "Cloning devops repo with user: ${GIT_USER}"
+        fi
+        git clone $DEVOPS_REPO
+        if [[ $GIT_USER != false ]]; then
+            history -c
+        fi
         if [[ ! -d devops ]]; then
             output_log "no devops dir after git - problem"
         else
