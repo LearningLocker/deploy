@@ -411,10 +411,18 @@ function base_install ()
             output_log "running git clone"
             if [[ $ENTERPRISE == true ]]; then
                 MAIN_REPO=https://github.com/LearningLocker/learninglocker_node
+                if [[ $GIT_USER != false ]]; then
+                    MAIN_REPO=https://${GIT_USER}:${GIT_PASS}github.com/LearningLocker/learninglocker_node
+                fi
             else
                 MAIN_REPO=https://github.com/LearningLocker/learninglocker
             fi
+            # clone repo
             git clone -q -b ${GIT_BRANCH} $MAIN_REPO ${WEBAPP_SUBDIR}
+            # clear the history in case we passed in the user/pass
+            if [[ $GIT_USER != false ]]; then
+                history -c
+            fi
             if [[ -d ${WEBAPP_SUBDIR} ]]; then
                 output_log "no ${WEBAPP_SUBDIR} dir after git - problem"
                 break
@@ -1142,6 +1150,8 @@ LOCAL_PATH=false
 LOCAL_USER=false
 TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
+GIT_USER=false
+GIT_PASS=false
 XAPI_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
@@ -1235,7 +1245,7 @@ fi
 #################################################################################
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-while getopts ":h:y:b:x:e:m:r:" OPT; do
+while getopts ":h:y:b:x:e:m:r:u:p:" OPT; do
     case "$OPT" in
         h)
             show_help
@@ -1278,6 +1288,16 @@ while getopts ":h:y:b:x:e:m:r:" OPT; do
         r)
             if [[ $OPTARG == "1" ]]; then
                 FORCE_REDIS_NOINSTALL=true
+            fi
+        ;;
+        u)
+            if [[ -n $OPTARG ]]; then
+                GIT_USER=$OPTARG
+            fi
+        ;;
+        p)
+            if [[ -n $OPTARG ]]; then
+                GIT_PASS=$OPTARG
             fi
         ;;
     esac
