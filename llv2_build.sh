@@ -720,7 +720,7 @@ function debian_install ()
     fi
 
 
-    INSTALLED_NODE_VERSION=`node --version`
+    INSTALLED_NODE_VERSION=`nodejs --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
         output "ERROR :: node doesn't seem to be installed - exiting"
         exit 1
