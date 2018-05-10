@@ -411,10 +411,19 @@ function base_install ()
             output_log "running git clone"
             if [[ $ENTERPRISE == true ]]; then
                 MAIN_REPO=https://github.com/LearningLocker/learninglocker_node
+                if [[ $GIT_USER != false ]]; then
+                    MAIN_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/learninglocker_node
+                    output_log "Cloning main repo with user: ${GIT_USER}"
+                fi
             else
                 MAIN_REPO=https://github.com/LearningLocker/learninglocker
             fi
+            # clone repo
             git clone -q -b ${GIT_BRANCH} $MAIN_REPO ${WEBAPP_SUBDIR}
+            # clear the history in case we passed in the user/pass
+            if [[ $GIT_USER != false ]]; then
+                history -c
+            fi
             if [[ -d ${WEBAPP_SUBDIR} ]]; then
                 output_log "no ${WEBAPP_SUBDIR} dir after git - problem"
                 break
@@ -652,6 +661,15 @@ function setup_nginx_enterprise ()
 }
 
 
+function find_clam_config ()
+{
+    CLAMD_CONFIG=/etc/clamd.conf
+    if [[ -f /etc/clamav/clamd.conf ]]; then
+        CLAMD_CONFIG=/etc/clamav/clamd.conf
+    fi
+}
+
+
 
 #################################################################################
 #                           DEBIAN / UBUNTU FUNCTIONS                           #
@@ -692,6 +710,9 @@ function debian_install ()
     elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         INSTALL_NODE=true
         output_log "updating nodejs"
+    else
+        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
     if [[ $INSTALL_NODE == true ]]; then
@@ -702,10 +723,19 @@ function debian_install ()
     fi
 
 
-    INSTALLED_NODE_VERSION=`node --version`
+    if [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+        output "Something went wrong in installing/updating nodejs. This is likely a fault in your apt config. Can't continue"
+        exit 0
+    fi
+
+
+    INSTALLED_NODE_VERSION=`nodejs --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-        output "ERROR :: node doesn't seem to be installed - exiting"
-        exit 1
+        INSTALLED_NODE_VERSION=`node --version`
+        if [[ $INSTALLED_NODE_VERSION == "" ]]; then
+            output "ERROR :: node doesn't seem to be installed - exiting"
+            exit 1
+        fi
     fi
     output "node version - $INSTALLED_NODE_VERSION"
 
@@ -900,6 +930,9 @@ function redhat_install ()
     elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         output_log "updating node"
         INSTALL_NODE=true
+    else
+        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
     if [[ $INSTALL_NODE == true ]]; then
@@ -913,11 +946,13 @@ function redhat_install ()
         output "Node.js already installed"
     fi
 
-
-    INSTALLED_NODE_VERSION=`node --version`
+    INSTALLED_NODE_VERSION=`nodejs --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-        output "ERROR :: node doesn't seem to be installed - exiting"
-        exit 1
+        INSTALLED_NODE_VERSION=`node --version`
+        if [[ $INSTALLED_NODE_VERSION == "" ]]; then
+            output "ERROR :: node doesn't seem to be installed - exiting"
+            exit 1
+        fi
     fi
     output "node version - $INSTALLED_NODE_VERSION"
 
@@ -1133,6 +1168,8 @@ LOCAL_PATH=false
 LOCAL_USER=false
 TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
+GIT_USER=false
+GIT_PASS=false
 XAPI_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
@@ -1226,7 +1263,7 @@ fi
 #################################################################################
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
-while getopts ":h:y:b:x:e:m:r:" OPT; do
+while getopts ":h:y:b:x:e:m:r:u:p:" OPT; do
     case "$OPT" in
         h)
             show_help
@@ -1269,6 +1306,16 @@ while getopts ":h:y:b:x:e:m:r:" OPT; do
         r)
             if [[ $OPTARG == "1" ]]; then
                 FORCE_REDIS_NOINSTALL=true
+            fi
+        ;;
+        u)
+            if [[ -n $OPTARG ]]; then
+                GIT_USER=$OPTARG
+            fi
+        ;;
+        p)
+            if [[ -n $OPTARG ]]; then
+                GIT_PASS=$OPTARG
             fi
         ;;
     esac
@@ -1407,9 +1454,9 @@ while true; do
             output "symlink path: $SYMLINK_PATH"
             output "user: $LOCAL_USER"
             # clamav
-            if [[ `command -v clamscan` ]]; then
+            if [[ `command -v clamdscan` ]]; then
                 output "ClamAV already installed"
-                CLAM_PATH=`command -v clamscan`
+                CLAM_PATH=`command -v clamdscan`
                 CLAM_INSTALLED=true
             else
                 CLAM_INSTALL=true
@@ -1635,9 +1682,9 @@ while true; do
 
 
         # check for clamAV
-        if [[ `command -v clamscan` ]]; then
+        if [[ `command -v clamdscan` ]]; then
             output "ClamAV already installed"
-            CLAM_PATH=`command -v clamscan`
+            CLAM_PATH=`command -v clamdscan`
             CLAM_INSTALLED=true
         else
             CLAM_INSTALLED=false
@@ -1875,7 +1922,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     # get the clamAV path if needed
     if [[ $CLAM_INSTALL == true ]]; then
-        CLAM_PATH=`command -v clamscan`
+        CLAM_PATH=`command -v clamdscan`
     fi
 
 
@@ -2002,7 +2049,9 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     # update the .env with the path to clamav
     if [[ $CLAM_INSTALLED == true ]]; then
-        sed -i "s?#CLAMSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
+        sed -i "s?#CLAMDSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
+        find_clam_config
+        sed -i "s?#CLAMDSCAN_CONF=/etc/clamav/clamd.conf?CLAMSCAN_BINARY=${CLAMD_CONFIG}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
     fi
 
     # set up symlink
@@ -2399,7 +2448,16 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     print_spinner true
 
     while true; do
-        git clone https://github.com/LearningLocker/devops /tmp/devops
+        DEVOPS_REPO=https://github.com/LearningLocker/devops /tmp/devops
+
+        if [[ $GIT_USER != false ]]; then
+            DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/devops
+            output_log "Cloning devops repo with user: ${GIT_USER}"
+        fi
+        git clone $DEVOPS_REPO /tmp/devops
+        if [[ $GIT_USER != false ]]; then
+            history -c
+        fi
         if [[ ! -d devops ]]; then
             output_log "no devops dir after git - problem"
         else
