@@ -2448,7 +2448,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     print_spinner true
 
     while true; do
-        DEVOPS_REPO=https://github.com/LearningLocker/devops /tmp/devops
+        DEVOPS_REPO=https://github.com/LearningLocker/devops
 
         if [[ $GIT_USER != false ]]; then
             DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/devops
