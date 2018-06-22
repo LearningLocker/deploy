@@ -3,17 +3,18 @@
 # This script will start up a bunch of AMIs in different regions, download the learning locker build script on to each one, run it and create an AMI with the given name
 #
 # USAGE:
-#    python setup_all_amis.py -r REGION_LIST -n NAME -d DESCRIPTION -k AWS_KEY -s AWS_SECRET -a AWS_ACCOUNT_ID
-#    python setup_all_amis.py -r us-west-1,us-east-1,eu-west-1 -n "ll v2 2.0.3" -d "Learning Locker 2.0.3 from HT2 Labs" -k abc -s bcd/hyt -a 000836383
+#    python3 setup_all_amis.py -r REGION_LIST -n NAME -d DESCRIPTION -k AWS_KEY -s AWS_SECRET -a AWS_ACCOUNT_ID
+#    python3 setup_all_amis.py -r us-west-1,us-east-1,eu-west-1 -n "ll v2 2.0.3" -d "Learning Locker 2.0.3 from HT2 Labs" -k abc -s bcd/hyt -a 000836383
 #
 # TODO
 #   validate key / sg exists
 #   move validate_region() data to a file
 #
 # REQUIREMENTS
-# pip install paramiko
-# pip install argparse
-# pip install boto3
+# pip3 install paramiko
+# pip3 install argparse
+# pip3 install boto3
+# pip3 install ubuntufinder
 
 import os
 import sys
