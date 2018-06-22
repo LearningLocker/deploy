@@ -63,7 +63,7 @@ def validate_region (region, distro_version):
 
     try:
         # hard-setting to ebs and amd64 as that's all we need
-        image = ubuntufinder.find_image(region, distro_version, "amd64", "ebs-ssd")
+        image = ubuntufinder.find_image(region, distro_version, "amd64", "ebs-ssd", "hvm")
         ami_id = image.ami_id
     except:
         print("couldn't find a suitable AMI id for distro:" + distro_version + " region:" + region)
