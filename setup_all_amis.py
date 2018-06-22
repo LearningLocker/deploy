@@ -7,7 +7,6 @@
 #    python setup_all_amis.py -r us-west-1,us-east-1,eu-west-1 -n "ll v2 2.0.3" -d "Learning Locker 2.0.3 from HT2 Labs" -k abc -s bcd/hyt -a 000836383
 #
 # TODO
-#   ebs volume size of instances
 #   validate key / sg exists
 #   move validate_region() data to a file
 #
@@ -289,7 +288,7 @@ for ami_data in ami_datasets:
 
     # start the instance
     print("ImageId=" + ami_id + ", MinCount=1, MaxCount=1, InstanceType=instance_size, SecurityGroups=[" + ami_data['sg'] + "], KeyName=" + ami_data['kp'])
-    instance = res.create_instances(ImageId=ami_id, MinCount=1, MaxCount=1, InstanceType=instance_size, SecurityGroups=[ami_data['sg']], KeyName=ami_data['kp'])
+    instance = res.create_instances(ImageId=ami_id, MinCount=1, MaxCount=1, InstanceType=instance_size, SecurityGroups=[ami_data['sg']], KeyName=ami_data['kp'], BlockDeviceMappings=[{'DeviceName':'/dev/sda1','Ebs':{'VolumeSize':20,'VolumeType':'gp2'}}])
     print("....Initiated instance id: " + instance[0].id + " in " + region + " with name: " + build_name)
 
     instance_datasets[instance[0].id] = {"region":region, "instance_id": instance[0].id, "kp": ami_data['kp']}
