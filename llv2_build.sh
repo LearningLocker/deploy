@@ -2230,12 +2230,12 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     fi
 
 
-    O_V_FILE=${SYMLINK_PATH}/${WEBAPP_SUBDIR}/VERSION
+    NODE_PACKAGE_FILE=${SYMLINK_PATH}/${WEBAPP_SUBDIR}/package.json
     DO_MIGRATIONS=false
-    if [[ -f $O_V_FILE ]]; then
-        CUR_VER=`cat ${O_V_FILE}`
+    if [[ -f $NODE_PACKAGE_FILE ]]; then
+        CUR_VER=$(node -p -e "require('$NODE_PACKAGE_FILE').version")
         if [[ $CUR_VER != "" ]]; then
-            if [[ `echo $CUR_VAR | grep "^2.0" | wc -l` -eq 0 ]]; then
+            if [[ `echo $CUR_VER | grep "^2.0" | wc -l` -eq 0 ]]; then
                 DO_MIGRATIONS=true
             fi
         fi
