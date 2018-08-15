@@ -3,8 +3,8 @@
 # This script will start up a bunch of AMIs in different regions, download the learning locker build script on to each one, run it and create an AMI with the given name
 #
 # USAGE:
-#    python3 setup_all_amis.py -r REGION_LIST -n NAME -d DESCRIPTION -k AWS_KEY -s AWS_SECRET -a AWS_ACCOUNT_ID
-#    python3 setup_all_amis.py -r us-west-1,us-east-1,eu-west-1 -n "ll v2 2.0.3" -d "Learning Locker 2.0.3 from HT2 Labs" -k abc -s bcd/hyt -a 000836383
+#    python3 setup_all_amis.py -r REGION_LIST -n NAME -d DESCRIPTION -b WEBAPP_BRANCH -x XAPI_BRANCH -k AWS_KEY -s AWS_SECRET -a AWS_ACCOUNT_ID
+#    python3 setup_all_amis.py -r us-west-1,us-east-1,eu-west-1 -n "Learning Locker 2.5.0 from HT2 Labs" -d "Learning Locker 2.5.0 from HT2 Labs" -b v2.5.0 -x v2.2.9 -k abc -s bcd/hyt -a 000836383
 #
 # TODO
 #   validate key / sg exists
@@ -42,6 +42,9 @@ import ubuntufinder
 # ap-northeast-1    : Tokyo
 # ap-south-1        : Mumbai
 # sa-east-1         : Sao Paulo
+#
+# List of AWS supported regions in script-ready format
+# us-east-1,us-east-2,us-west-1,us-west-2,ca-central-1,eu-west-1,eu-central-1,eu-west-2,ap-southeast-1,ap-southeast-2,ap-northeast-2,ap-northeast-1,ap-south-1,sa-east-1
 #
 # Supported Ubuntu distros: 16.04, 17.04
 
