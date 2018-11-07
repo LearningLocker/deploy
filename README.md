@@ -49,9 +49,13 @@ You can also install Learning Locker using an Amazon Machine Image (AMI).
 Our AMIs are available in the list of community AMIs by searching for 'learning locker' in the following EC2 zones:
 
 ```
-us-west-1
-us-east-1
-eu-west-1
+us-east-1 (N. Virginia)        |  eu-west-2 (London)
+us-east-2 (Ohio)               |  ap-southeast-1 (Singapore)
+us-west-1 (N. California)      |  ap-southeast-2 (Sydney)
+us-west-2 (Oregon)             |  ap-northeast-2 (Seoul)
+ca-central-1 (Canada Central)  |  ap-northeast-1 (Tokyo)
+eu-west-1 (Ireland)            |  ap-south-1 (Mumbai)
+eu-central-1 (Frankfurt)       |  sa-east-1 (Sao Paulo)
 ```
 
 The AMIs are built with all required software on and as such are designed to be used to try out Learning Locker with little 
