@@ -125,6 +125,18 @@ function determine_os_version ()
         fi
     fi
 
+    if [[ OS_VERSION != "aUbuntu" ]]; then
+        output "*******************************************************************"
+        output "*******************************************************************"
+        output "** ------------------------------------------------------------- **"
+        output "** NOTE: IN FUTURE, THIS INSTALL SCRIPT WILL ONLY SUPPORT UBUNTU **"
+        output "**                                                               **"
+        output "**          Press any key to acknowledge this message.           **"
+        output "** ------------------------------------------------------------- **"
+        output "*******************************************************************"
+        output "*******************************************************************"
+    fi
+
     if [[ ! $OS_VERSION ]]; then
         output "Couldn't determind version from $VERSION_FILE, unknown OS: $RAW_OS_VERSION"
         exit 0
@@ -682,9 +694,9 @@ function debian_install ()
     apt-get remove cmdtest >> $OUTPUT_LOG 2>>$ERROR_LOG &
 
     # we run an apt-get update here in case the distro is out of date
-    if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
+    if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
-        apt-get -y -qq install net-tools curl git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
+        apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
     fi
 
     if [[ ! `command -v pwgen ` ]]; then
@@ -780,7 +792,15 @@ function debian_nginx ()
     done
 
     output "installing nginx...." true
-    apt-get -y -qq install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    output "Setting up nginx repo (Stock Ubuntu version is too old)"
+    cd /tmp/ && wget http://nginx.org/keys/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG && cd -
+    apt-key add /tmp/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG
+    echo "deb https://nginx.org/packages/ubuntu/ $(lsb_release -cs) nginx" | tee /etc/apt/sources.list.d/Nginx.list
+    apt update >> $OUTPUT_LOG 2>>$ERROR_LOG
+    apt -qq -y install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG
+    # Attempt to start via both services - one will likely fail but
+    output "Attempting to start nginx service...."
+    output "If this fails you will need to check how the nginx service is setup for your system and manually start it"
     print_spinner true
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
