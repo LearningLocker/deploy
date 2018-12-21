@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (C) 2017 ht2labs
+# Copyright (C) 2017-2018 ht2labs
 #
 # This program is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of
@@ -126,15 +126,15 @@ function determine_os_version ()
     fi
 
     if [[ OS_VERSION != "aUbuntu" ]]; then
-        output "*******************************************************************"
-        output "*******************************************************************"
-        output "** ------------------------------------------------------------- **"
-        output "** NOTE: IN FUTURE, THIS INSTALL SCRIPT WILL ONLY SUPPORT UBUNTU **"
-        output "**                                                               **"
-        output "**          Press any key to acknowledge this message.           **"
-        output "** ------------------------------------------------------------- **"
-        output "*******************************************************************"
-        output "*******************************************************************"
+        output "||---------------------------------------------------------------||"
+        output "||  -----------------------------------------------------------  ||"
+        output "||    -------------------------------------------------------    ||"
+        output "|| NOTE: IN FUTURE, THIS INSTALL SCRIPT WILL ONLY SUPPORT UBUNTU ||"
+        output "||                                                               ||"
+        output "||          Press any key to acknowledge this message.           ||"
+        output "||    -------------------------------------------------------    ||"
+        output "||  -----------------------------------------------------------  ||"
+        output "||---------------------------------------------------------------||"
     fi
 
     if [[ ! $OS_VERSION ]]; then
