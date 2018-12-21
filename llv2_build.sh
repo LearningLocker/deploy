@@ -795,7 +795,7 @@ function debian_nginx ()
 
     output "installing nginx...." true
     output "Setting up nginx repo (Stock Ubuntu version is too old)"
-    cd /tmp/ && wget http://nginx.org/keys/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG && cd -
+    cd /tmp/ && wget http://nginx.org/keys/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG && cd - >> $OUTPUT_LOG 2>>$ERROR_LOG 
     apt-key add /tmp/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG
     echo "deb https://nginx.org/packages/ubuntu/ $(lsb_release -cs) nginx" | tee /etc/apt/sources.list.d/Nginx.list >> $OUTPUT_LOG 2>>$ERROR_LOG
     apt update >> $OUTPUT_LOG 2>>$ERROR_LOG
