@@ -128,14 +128,15 @@ function determine_os_version ()
     if [[ OS_VERSION != "aUbuntu" ]]; then
         printf "||---------------------------------------------------------------||\n"
         printf "||  -----------------------------------------------------------  ||\n"
-        printf "||    -------------------------------------------------------    ||\n"
         printf "|| NOTE: IN FUTURE, THIS INSTALL SCRIPT WILL ONLY SUPPORT UBUNTU ||\n"
         printf "||                                                               ||\n"
         printf "||          Press any key to acknowledge this message.           ||\n"
-        printf "||    -------------------------------------------------------    ||\n"
         printf "||  -----------------------------------------------------------  ||\n"
         printf "||---------------------------------------------------------------||\n"
-        read n
+        if [[ $BYPASSALL == false ]]; then
+            read -r -s -n 1 n
+        fi
+        return 0
     fi
 
     if [[ ! $OS_VERSION ]]; then
@@ -816,9 +817,9 @@ function debian_nginx ()
     NGINX_CONFIG=/etc/nginx/sites-available/learninglocker.conf
     XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
     BASE_ENV=${PWD}/${WEBAPP_SUBDIR}/.env
-    rm /etc/nginx/sites-enabled/*
+    find /etc/nginx/conf.d/ -type f -not -name 'default.conf' -delete
     mv ${1}/nginx.conf.example $NGINX_CONFIG
-    ln -s $NGINX_CONFIG /etc/nginx/sites-enabled/learninglocker.conf
+    ln -s $NGINX_CONFIG /etc/nginx/conf.d/learninglocker.conf
     # sub in variables from the .envs to the nginx config
     if [[ $ENTERPRISE == true ]]; then
         setup_nginx_enterprise $NGINX_CONFIG $2
