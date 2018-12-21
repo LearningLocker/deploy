@@ -797,12 +797,9 @@ function debian_nginx ()
     output "Setting up nginx repo (Stock Ubuntu version is too old)"
     cd /tmp/ && wget http://nginx.org/keys/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG && cd -
     apt-key add /tmp/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG
-    echo "deb https://nginx.org/packages/ubuntu/ $(lsb_release -cs) nginx" | tee /etc/apt/sources.list.d/Nginx.list
+    echo "deb https://nginx.org/packages/ubuntu/ $(lsb_release -cs) nginx" | tee /etc/apt/sources.list.d/Nginx.list >> $OUTPUT_LOG 2>>$ERROR_LOG
     apt update >> $OUTPUT_LOG 2>>$ERROR_LOG
     apt -qq -y install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG
-    # Attempt to start via both services - one will likely fail but
-    output "Attempting to start nginx service...."
-    output "If this fails you will need to check how the nginx service is setup for your system and manually start it"
     print_spinner true
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
