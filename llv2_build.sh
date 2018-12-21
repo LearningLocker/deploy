@@ -125,7 +125,7 @@ function determine_os_version ()
         fi
     fi
 
-    if [[ OS_VERSION != "aUbuntu" ]]; then
+    if [[ OS_VERSION != "Ubuntu" ]]; then
         printf "||---------------------------------------------------------------||\n"
         printf "||  -----------------------------------------------------------  ||\n"
         printf "|| NOTE: IN FUTURE, THIS INSTALL SCRIPT WILL ONLY SUPPORT UBUNTU ||\n"
