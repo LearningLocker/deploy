@@ -817,7 +817,10 @@ function debian_nginx ()
     NGINX_CONFIG=/etc/nginx/sites-available/learninglocker.conf
     XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
     BASE_ENV=${PWD}/${WEBAPP_SUBDIR}/.env
-    find /etc/nginx/conf.d/ -type f -not -name 'default.conf' -delete
+    # remove default config if it exists
+    if [[ -f /etc/nginx/conf.d/default.conf ]]; then
+        rm /etc/nginx/conf.d/default.conf
+    fi
     mv ${1}/nginx.conf.example $NGINX_CONFIG
     ln -s $NGINX_CONFIG /etc/nginx/conf.d/learninglocker.conf
     # sub in variables from the .envs to the nginx config
