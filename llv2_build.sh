@@ -819,7 +819,6 @@ function debian_nginx ()
         rm /etc/nginx/conf.d/default.conf
     fi
     mv ${1}/nginx.conf.example $NGINX_CONFIG
-    ln -s $NGINX_CONFIG /etc/nginx/conf.d/learninglocker.conf
     # sub in variables from the .envs to the nginx config
     if [[ $ENTERPRISE == true ]]; then
         setup_nginx_enterprise $NGINX_CONFIG $2
