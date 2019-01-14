@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (C) 2017 ht2labs
+# Copyright (C) 2017-2019 HT2 Labs
 #
 # This program is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of
@@ -123,6 +123,20 @@ function determine_os_version ()
             output "Only set up for debian/ubuntu/centos at the moment I'm afraid - exiting"
             exit 0
         fi
+    fi
+
+    if [[ $OS_VERSION != "Ubuntu" ]]; then
+        printf "||---------------------------------------------------------------||\n"
+        printf "||  -----------------------------------------------------------  ||\n"
+        printf "|| NOTE: IN FUTURE, THIS INSTALL SCRIPT WILL ONLY SUPPORT UBUNTU ||\n"
+        printf "||                                                               ||\n"
+        printf "||          Press any key to acknowledge this message.           ||\n"
+        printf "||  -----------------------------------------------------------  ||\n"
+        printf "||---------------------------------------------------------------||\n"
+        if [[ $BYPASSALL == false ]]; then
+            read -r -s -n 1 n
+        fi
+        return 0
     fi
 
     if [[ ! $OS_VERSION ]]; then
@@ -682,9 +696,9 @@ function debian_install ()
     apt-get remove cmdtest >> $OUTPUT_LOG 2>>$ERROR_LOG &
 
     # we run an apt-get update here in case the distro is out of date
-    if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
+    if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
-        apt-get -y -qq install net-tools curl git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
+        apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
     fi
 
     if [[ ! `command -v pwgen ` ]]; then
@@ -779,8 +793,13 @@ function debian_nginx ()
         fi
     done
 
-    output "installing nginx...." true
-    apt-get -y -qq install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    output "installing nginx..."
+    output "Setting up nginx repo (Stock Ubuntu version is too old)"
+    cd /tmp/ && wget http://nginx.org/keys/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG && cd - >> $OUTPUT_LOG 2>>$ERROR_LOG 
+    apt-key add /tmp/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG
+    echo "deb https://nginx.org/packages/ubuntu/ $(lsb_release -cs) nginx" | tee /etc/apt/sources.list.d/Nginx.list >> $OUTPUT_LOG 2>>$ERROR_LOG
+    apt update >> $OUTPUT_LOG 2>>$ERROR_LOG
+    apt -qq -y install nginx >> $OUTPUT_LOG 2>>$ERROR_LOG
     print_spinner true
 
     if [[ ! -f ${1}/nginx.conf.example ]]; then
@@ -792,12 +811,14 @@ function debian_nginx ()
     fi
 
 
-    NGINX_CONFIG=/etc/nginx/sites-available/learninglocker.conf
+    NGINX_CONFIG=/etc/nginx/conf.d/learninglocker.conf
     XAPI_ENV=${PWD}/${XAPI_SUBDIR}/.env
     BASE_ENV=${PWD}/${WEBAPP_SUBDIR}/.env
-    rm /etc/nginx/sites-enabled/*
+    # remove default config if it exists
+    if [[ -f /etc/nginx/conf.d/default.conf ]]; then
+        rm /etc/nginx/conf.d/default.conf
+    fi
     mv ${1}/nginx.conf.example $NGINX_CONFIG
-    ln -s $NGINX_CONFIG /etc/nginx/sites-enabled/learninglocker.conf
     # sub in variables from the .envs to the nginx config
     if [[ $ENTERPRISE == true ]]; then
         setup_nginx_enterprise $NGINX_CONFIG $2
