@@ -2251,17 +2251,6 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
     fi
 
 
-    O_V_FILE=${SYMLINK_PATH}/${WEBAPP_SUBDIR}/VERSION
-    DO_MIGRATIONS=false
-    if [[ -f $O_V_FILE ]]; then
-        CUR_VER=`cat ${O_V_FILE}`
-        if [[ $CUR_VER != "" ]]; then
-            if [[ `echo $CUR_VAR | grep "^2.0" | wc -l` -eq 0 ]]; then
-                DO_MIGRATIONS=true
-            fi
-        fi
-    fi
-
     # copy the .env from the existing install over to the new path
     output "Copying existing config to new version"
     cp ${COPYFROMPATH}/.env ${LOCAL_PATH}/${WEBAPP_SUBDIR}/.env
@@ -2367,24 +2356,22 @@ elif [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == true ]]; then
 
     # migration logic
     DONE_MIGRATIONS=false
-    if [[ $DO_MIGRATIONS == true ]]; then
-        echo "[LL] We need to perform some migrations on your setup. This can take some time to run and can be run manually by running"
-        echo "     'cd ${LOCAL_PATH}/${WEBAPP_SUBDIR} && yarn migrate'"
-        echo "     If you don't have a valid config yet please skip this step. Do you want to run migrations ? [y|n] (press enter for default of 'y')"
-        while true; do
-            read -r -s -n 1 c
-            if [[ $c == "y" ]] || [[ $c == "Y" ]] || [[ $c == "" ]]; then
-                output "running yarn migrate...."
-                cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}
-                yarn migrate
-                output "done!"
-                DONE_MIGRATIONS=true
-                break
-            elif [[ $c == "n" ]] || [[ $c == "N" ]]; then
-                break
-            fi
-        done
-    fi
+    echo "[LL] We are going to check if there are any migrations that need to be run. This can take some time to run and can be run manually by running"
+    echo "     'cd ${LOCAL_PATH}/${WEBAPP_SUBDIR} && yarn migrate'"
+    echo "     If you don't have a valid config yet please skip this step. Do you want to run migrations ? [y|n] (press enter for default of 'y')"
+    while true; do
+        read -r -s -n 1 c
+        if [[ $c == "y" ]] || [[ $c == "Y" ]] || [[ $c == "" ]]; then
+            output "running yarn migrate...."
+            cd ${LOCAL_PATH}/${WEBAPP_SUBDIR}
+            yarn migrate
+            output "done!"
+            DONE_MIGRATIONS=true
+            break
+        elif [[ $c == "n" ]] || [[ $c == "N" ]]; then
+            break
+        fi
+    done
 
 
 elif [[ $PACKAGE_INSTALL == true ]]; then
