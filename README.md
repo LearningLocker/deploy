@@ -10,13 +10,12 @@ Please run the required update script for your distro to ensure you have the lat
 
 .e.g
 ```
-yum update
+apt update && apt upgrade
 ```
 or
 ```
-apt-get update && apt-get upgrade
+yum update
 ```
-
 
 
 
@@ -89,15 +88,19 @@ process creates a restart script which you can run as follows:
 	service pm2-{USER} restart
 
 The user in this is the user you opted to install Learning Locker under. If you went with the default of
-'node' then this would be:
+'learninglocker' then this would be:
 
-	service pm2-node restart
+	service pm2-learninglocker restart
 
 
-### Supported Operating systems
+### Supported Operating Systems
+	Ubuntu 16 [RECOMMENDED]
+	Ubuntu 18 [NOT YET SUPPORTED - WILL BE SUPPORTED IN FUTURE]
+	
+### DEPRECATED Operating Systems - SUPPORT WILL BE REMOVED IN FUTURE
+	Ubuntu 14
 	CentOS
 	Fedora
-	Ubuntu
 	Debian
 
 ### Software Required - Installed automatically
@@ -106,6 +109,7 @@ The user in this is the user you opted to install Learning Locker under. If you 
 	build tools (ie: GCC)
 	xvfb
 	curl
+	wget
 	nodejs
 	yarn
 	pm2
@@ -116,12 +120,12 @@ The user in this is the user you opted to install Learning Locker under. If you 
 	Redis
 
 In addition to the above, the software will require access to an instance of MongoDB and Redis. By default,
-the configuration points to instances on localhost and will offer to install mongo & redis for you if you
+the configuration points to instances on localhost and will offer to install MongoDB & Redis for you if you
 want to get everything working on a single server.
 
 
 ### Recommended hardware
 While there is no specific hardware requirement beyond a reasonably modern 64bit x86_64 computer with 2GB of
-RAM, you should pay attention to your memory usage. If you're running redis and / or mongo on the same server
-as learning locker then you'll need more memory than without. Server load will depend on the use cases for
+RAM, you should pay attention to your memory usage. If you're running Redis and / or MongoDB on the same server
+as Learning Locker then you'll need more memory than without. Server load will depend on the use cases for
 your particular organisation.
