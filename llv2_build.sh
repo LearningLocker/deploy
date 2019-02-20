@@ -833,10 +833,14 @@ function debian_mongo ()
 {
     D_M_I=false
     if [[ $OS_VERSION == "Ubuntu" ]]; then
-        if [[ $OS_VNO == "16.04" ]]; then
             output "Setting up mongo repo (Stock Ubuntu version is too old)"
-            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 >> $OUTPUT_LOG 2>>$ERROR_LOG
-            echo "deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list
+            apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4 >> $OUTPUT_LOG 2>>$ERROR_LOG
+            if [[ $OS_VNO == "16.04" ]]; then
+                echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+            fi
+            if [[ $OS_VNO == "18.04" ]]; then
+                echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+            fi
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
             systemctl unmask mongod
             apt-get -qq -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
@@ -846,7 +850,6 @@ function debian_mongo ()
             service mongod start
             systemctl enable mongod.service
             D_M_I=true
-        fi
     fi
 
     if [[ $D_M_I == false ]]; then
@@ -1103,16 +1106,16 @@ function redhat_nginx ()
 #################################################################################
 function amazon_mongo ()
 {
-    MONGO_REPO_FILE=/etc/yum.repos.d/mongodb-org-3.4.repo
+    MONGO_REPO_FILE=/etc/yum.repos.d/mongodb-org-4.0.repo
 
     output "setting up mongo repo in $MONGO_REPO_FILE"
 
-    echo "[mongodb-org-3.4]" > $MONGO_REPO_FILE
+    echo "[mongodb-org-4.0]" > $MONGO_REPO_FILE
     echo "name=MongoDB Repository" >> $MONGO_REPO_FILE
-    echo "baseurl=https://repo.mongodb.org/yum/amazon/2013.03/mongodb-org/3.4/x86_64/" >> $MONGO_REPO_FILE
+    echo "baseurl=https://repo.mongodb.org/yum/amazon/2013.03/mongodb-org/4.0/x86_64/" >> $MONGO_REPO_FILE
     echo "gpgcheck=1" >> $MONGO_REPO_FILE
     echo "enabled=1" >> $MONGO_REPO_FILE
-    echo "gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc" >> $MONGO_REPO_FILE
+    echo "gpgkey=https://www.mongodb.org/static/pgp/server-4.0.asc" >> $MONGO_REPO_FILE
 
     output "installing mongodb...." true
     yum -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG &
