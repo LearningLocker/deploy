@@ -128,7 +128,8 @@ function determine_os_version ()
     if [[ $OS_VERSION != "Ubuntu" ]]; then
         printf "||---------------------------------------------------------------||\n"
         printf "||  -----------------------------------------------------------  ||\n"
-        printf "|| NOTE: IN FUTURE, THIS INSTALL SCRIPT WILL ONLY SUPPORT UBUNTU ||\n"
+        printf "||     NOTE: THIS SCRIPT ONLY FULLY SUPPORTS UBUNTU 16 & 18      ||\n"
+        printf "||   it may work on other systems, but this is not guaranteed    ||\n"
         printf "||                                                               ||\n"
         printf "||          Press any key to acknowledge this message.           ||\n"
         printf "||  -----------------------------------------------------------  ||\n"
