@@ -12,10 +12,6 @@ Please run the required update script for your distro to ensure you have the lat
 ```
 apt update && apt upgrade
 ```
-or
-```
-yum update
-```
 
 
 
@@ -72,12 +68,8 @@ organisation and user. This file will be generated when the server is fully runn
 The software creates a `.env` file in your install directory and within the `xapi/` sub-directory. You can
 configure things here if you want to use external mongo or redis servers or change any ports in use.
 In addition, the software uses nginx to route traffic. Routing rules are defined in the learninglocker
-nginx configuration which is installed as part of the script. This varies depending on OS but are
-currently:
-
-	CentOS / Fedora : /etc/nginx/conf.d/learninglocker.conf
-
-	Debian / Ubuntu : /etc/nginx/sites-available/learninglocker.conf
+nginx configuration which is installed as part of the script, which can be found here:
+/etc/nginx/conf.d/learninglocker.conf
 
 
 ### Running / restarting
@@ -93,15 +85,10 @@ The user in this is the user you opted to install Learning Locker under. If you 
 	service pm2-learninglocker restart
 
 
-### Supported Operating Systems
-	Ubuntu 16 [RECOMMENDED]
-	Ubuntu 18 [NOT YET SUPPORTED - WILL BE SUPPORTED IN FUTURE]
-	
-### DEPRECATED Operating Systems - SUPPORT WILL BE REMOVED IN FUTURE
-	Ubuntu 14
-	CentOS
-	Fedora
-	Debian
+### Fully Supported Operating Systems
+	Ubuntu 16
+	Ubuntu 18 [RECOMMENDED]
+May work on other systems, but this is not guaranteed
 
 ### Software Required - Installed automatically
 	git
