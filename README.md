@@ -69,7 +69,7 @@ The user in this is the user you opted to install Learning Locker under. If you 
 ### Fully Supported Operating Systems
 	Ubuntu 16
 	Ubuntu 18 [RECOMMENDED]
-The install script work on other systems, but this is not guaranteed
+The install script may work on other systems, but this is not guaranteed
 
 ### Software Required - Installed automatically
 	git
