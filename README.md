@@ -22,13 +22,6 @@ curl -o- -L http://lrnloc.kr/installv2 > deployll.sh && bash deployll.sh
 ```sh
 wget -qO deployll.sh http://lrnloc.kr/installv2 && bash deployll.sh
 ```
-
-Alternatively, you can download the "deployll.sh" file from this repository and run the following command as the root user, then follow the prompts given.
-
-```sh
-bash deployll.sh
-```
-
 ### Amazon Machine Images (AMI)
 
 You can also install Learning Locker using an Amazon Machine Image (AMI). 
