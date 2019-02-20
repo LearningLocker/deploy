@@ -2,18 +2,11 @@
 
 This is the HT2 Learning Locker open source installer. It's designed to walk you through the process of
 downloading the code, running any steps needed (such as compilation) and generally setting up a complete
-working instance. To do this it attempts to detect your operating system, install any software needed
+working instance.
+
+To do this it attempts to detect your operating system, install any software needed
 then pull the code down from Github, run the build steps and install to whichever directory you've
 specified. You'll be prompted for everything required while you run the script.
-
-Please run the required update script for your distro to ensure you have the latest version of all packages.
-
-.e.g
-```
-apt update && apt upgrade
-```
-
-
 
 ### QuickStart
 
