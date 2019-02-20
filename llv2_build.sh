@@ -1416,7 +1416,7 @@ while true; do
             LOCAL_USER=$DEFAULT_USER
             USERDATA=`getent passwd $LOCAL_USER`
             if [[ $USERDATA != *"$LOCAL_USER"* ]]; then
-                useradd -r -d $RELEASE_PATH $LOCAL_USER
+                useradd -r -s /bin/bash -d $RELEASE_PATH $LOCAL_USER
                 if [[ ! -d $RELEASE_PATH ]]; then
                     mkdir -p $RELEASE_PATH
                 fi
@@ -1611,7 +1611,7 @@ while true; do
                     fi
                     if [[ $c == "y" ]]; then
                         output "Creating user '${u}'...." true
-                        useradd -r -d $RELEASE_PATH $u
+                        useradd -r -s /bin/bash -d $RELEASE_PATH $u
                         if [[ ! -d $RELEASE_PATH ]]; then
                             mkdir -p $RELEASE_PATH
                         fi
