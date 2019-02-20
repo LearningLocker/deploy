@@ -36,8 +36,6 @@ Alternatively, you can download the "llv2_build.sh" file from this repository an
 bash llv2_build.sh
 ```
 
-
-
 ### Amazon Machine Images (AMI)
 
 You can also install Learning Locker using an Amazon Machine Image (AMI). 
