@@ -699,7 +699,11 @@ function debian_install ()
     # we run an apt-get update here in case the distro is out of date
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
-        apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
+        if [[ $OS_VNO == "18.04" ]]; then
+            apt-get -y -qq install net-tools curl wget git python build-essential apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
+        else
+            apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
+        fi
     fi
 
     if [[ ! `command -v pwgen ` ]]; then
@@ -863,9 +867,23 @@ function debian_mongo ()
 
 function debian_redis ()
 {
-    output "installing redis...." true
-    apt-get -y -qq install redis-tools redis-server >> $OUTPUT_LOG 2>>$ERROR_LOG &
-    print_spinner true
+    output "installing redis..."
+    redisInstallOldPath=$(pwd)
+    cd /tmp
+    curl -sO http://download.redis.io/redis-stable.tar.gz
+    tar xzvf redis-stable.tar.gz >> $OUTPUT_LOG 2>>$ERROR_LOG
+    cd redis-stable
+    make >> $OUTPUT_LOG 2>>$ERROR_LOG && make install >> $OUTPUT_LOG 2>>$ERROR_LOG
+    mkdir /etc/redis
+    cp redis.conf /etc/redis
+    sed -i "s/^supervised .*/supervised systemd/" /etc/redis/redis.conf
+    sed -i "s/^dir .*/dir \/var\/lib\/redis/" /etc/redis/redis.conf | grep '^dir'
+    redisServiceFile="/etc/systemd/system/redis.service"
+    printf "[Unit]\n" >> $redisServiceFile && printf "Description=Redis In-Memory Data Store\n" >> $redisServiceFile && printf "After=network.target\n\n" >> $redisServiceFile && printf "[Service]\n" >> $redisServiceFile && printf "User=redis\n" >> $redisServiceFile && printf "Group=redis\n" >> $redisServiceFile && printf "ExecStart=/usr/local/bin/redis-server /etc/redis/redis.conf\n" >> $redisServiceFile && printf "ExecStop=/usr/local/bin/redis-cli shutdown\n" >> $redisServiceFile && printf "Restart=always\n\n" >> $redisServiceFile && printf "[Install]\n" >> $redisServiceFile && printf "WantedBy=multi-user.target\n" >> $redisServiceFile
+    adduser --system --group --no-create-home redis >> $OUTPUT_LOG 2>>$ERROR_LOG && mkdir /var/lib/redis && chown redis:redis /var/lib/redis && chmod 770 /var/lib/redis
+    systemctl enable redis >> $OUTPUT_LOG 2>>$ERROR_LOG
+    service redis start
+    cd ${redisInstallOldPath}
 }
 
 
