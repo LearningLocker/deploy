@@ -863,7 +863,7 @@ function debian_mongo ()
 
 function debian_redis ()
 {
-    output "installing redis..." true
+    output "installing redis..."
     redisInstallOldPath=$(pwd)
     cd /tmp
     curl -sO http://download.redis.io/redis-stable.tar.gz
