@@ -878,6 +878,7 @@ function debian_redis ()
     printf "[Unit]\n" >> $redisServiceFile && printf "Description=Redis In-Memory Data Store\n" >> $redisServiceFile && printf "After=network.target\n\n" >> $redisServiceFile && printf "[Service]\n" >> $redisServiceFile && printf "User=redis\n" >> $redisServiceFile && printf "Group=redis\n" >> $redisServiceFile && printf "ExecStart=/usr/local/bin/redis-server /etc/redis/redis.conf\n" >> $redisServiceFile && printf "ExecStop=/usr/local/bin/redis-cli shutdown\n" >> $redisServiceFile && printf "Restart=always\n\n" >> $redisServiceFile && printf "[Install]\n" >> $redisServiceFile && printf "WantedBy=multi-user.target\n" >> $redisServiceFile
     adduser --system --group --no-create-home redis >> $OUTPUT_LOG 2>>$ERROR_LOG && mkdir /var/lib/redis && chown redis:redis /var/lib/redis && chmod 770 /var/lib/redis
     systemctl enable redis >> $OUTPUT_LOG 2>>$ERROR_LOG
+    service redis start
     cd ${redisInstallOldPath}
 }
 
