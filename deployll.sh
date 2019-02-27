@@ -425,9 +425,9 @@ function base_install ()
         while true; do
             output_log "running git clone"
             if [[ $ENTERPRISE == true ]]; then
-                MAIN_REPO=https://github.com/LearningLocker/learninglocker_node
+                MAIN_REPO=https://github.com/LearningLocker/enterprise
                 if [[ $GIT_USER != false ]]; then
-                    MAIN_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/learninglocker_node
+                    MAIN_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningLocker/enterprise
                     output_log "Cloning main repo with user: ${GIT_USER}"
                 fi
             else
