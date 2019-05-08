@@ -519,6 +519,9 @@ fi
 #########################################################################################################
 # Register Bundle                                                                                       #
 #########################################################################################################
+# Remove existing SSH key from user
+cat /dev/null > /home/ubuntu/.ssh/authorized_keys
+
 for REGION in $REGIONS; do
 
     if [[ $INSTANCE_TYPE == "instance" ]]; then
