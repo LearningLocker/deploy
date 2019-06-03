@@ -483,11 +483,6 @@ function base_install ()
     output "setting up pm2 logrotate...." true
     pm2 set pm2-logrotate:compress true >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
-
-    # npm dedupe
-    output "running npm dedupe...." true
-    npm dedupe >> $OUTPUT_LOG 2>>$ERROR_LOG &
-    print_spinner true
 }
 
 
