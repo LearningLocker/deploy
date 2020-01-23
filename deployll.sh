@@ -463,7 +463,7 @@ function base_install ()
 
     # yarn install
     output "running yarn install...." true
-    yarn install >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    npm_config_build_from_source=true yarn install --ignore-engines >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
     # pm2 - done under npm rather than yarn as yarn does weird stuff on global installs on debian
@@ -1216,8 +1216,8 @@ MONGO_INSTALLED=false
 REDIS_INSTALLED=false
 PM2_OVERRIDE=false
 NODE_OVERRIDE=false
-NODE_VERSION=8.x
-NODE_VERSION_STRING=v8
+NODE_VERSION=10.x
+NODE_VERSION_STRING=v10
 UPDATE_MODE=false
 GIT_ASK=false
 GIT_REV=false
