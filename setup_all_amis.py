@@ -116,7 +116,7 @@ def run_on_server (hostname, region, port, username, keyfile, name, desc):
         chk = stdout.read()
 
         print(hostname + " getting & running deploy script")
-        stdin, stdout, stderr = client.exec_command("curl -o- -L http://lrnloc.kr/installv2 > deployll.sh && sudo bash deployll.sh -y 5 " + main_branch + " " + xapi_branch)
+        stdin, stdout, stderr = client.exec_command("curl -o- -L https://raw.githubusercontent.com/LearningLocker/deploy/master/deployll.sh > deployll.sh && sudo bash deployll.sh -y 5 " + main_branch + " " + xapi_branch)
         chk = stdout.read()
 
         print(hostname + " running AMI build script")
