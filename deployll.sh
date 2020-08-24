@@ -1834,6 +1834,7 @@ print_spinner true
 if [[ $ENTERPRISE == true ]]; then
     output "Copying enterprise pm2 configs"
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/aggregation-worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/aggregation-worker.json
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
     cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
 else
@@ -2074,6 +2075,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output "reprocessing enterprise files"
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/webapp.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/aggregation-worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
     fi
 
