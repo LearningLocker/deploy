@@ -857,8 +857,8 @@ function debian_mongo ()
             output "Attempting to start mongod service...."
             output "If this fails you will need to check how the Mongo service is setup for your system and manually start it"
             systemctl daemon-reload
-            systemctl mongod start
             systemctl enable mongod
+            systemctl start mongod 
             D_M_I=true
     fi
 
