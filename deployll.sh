@@ -716,40 +716,43 @@ function debian_install ()
             exit 0
         fi
     fi
+    
+    if [[ $OS_VERSION == "Ubuntu" ]]; then
+            if [[ $OS_VNO == "20.04" ]]; then
+                NODE_COMMAND="node"
+            fi
+    fi
 
     INSTALL_NODE=false
-    if [[ ! `command -v nodejs` ]]; then
+    if [[ ! `command -v $NODE_COMMAND` ]]; then
         INSTALL_NODE=true
         output_log "installing nodejs"
-    elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+    elif [[ `$NODE_COMMAND --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         INSTALL_NODE=true
         output_log "updating nodejs"
     else
-        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        CUR_NODE_VERSION=`$NODE_COMMAND --version | cut -d'.' -f 1`
         output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
     if [[ $INSTALL_NODE == true ]]; then
         curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG
-        apt-get -y -qq install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
+        apt-get -y -qq install $NODE_COMMAND >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
         output "Node.js already installed"
     fi
 
 
-    if [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+    if [[ `$NODE_COMMAND --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         output "Something went wrong in installing/updating nodejs. This is likely a fault in your apt config. Can't continue"
         exit 0
     fi
 
 
-    INSTALLED_NODE_VERSION=`nodejs --version`
+    INSTALLED_NODE_VERSION=`$NODE_COMMAND --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-        INSTALLED_NODE_VERSION=`node --version`
-        if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-            output "ERROR :: node doesn't seem to be installed - exiting"
-            exit 1
-        fi
+        output "ERROR :: node doesn't seem to be installed - exiting"
+        exit 1
     fi
     output "node version - $INSTALLED_NODE_VERSION"
 
@@ -1216,6 +1219,7 @@ MONGO_INSTALLED=false
 REDIS_INSTALLED=false
 PM2_OVERRIDE=false
 NODE_OVERRIDE=false
+NODE_COMMAND="nodejs"
 NODE_VERSION=10.x
 NODE_VERSION_STRING=v10
 UPDATE_MODE=false
