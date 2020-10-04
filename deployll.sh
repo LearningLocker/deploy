@@ -848,8 +848,8 @@ function debian_mongo ()
                 echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
             fi
             if [[ $OS_VNO == "20.04" ]]; then
-                apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 3f75c80ee56c41f4e49515b62acd4032058f8b6b >> $OUTPUT_LOG 2>>$ERROR_LOG
-                echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.2 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.2.list
+                apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 20691eec35216c63caf66ce1656408e390cfb1f5 >> $OUTPUT_LOG 2>>$ERROR_LOG
+                echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
             fi
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
             systemctl unmask mongod
