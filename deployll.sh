@@ -852,13 +852,13 @@ function debian_mongo ()
                 echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
             fi
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
-            systemctl unmask mongod
             apt-get -qq -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
             # Attempt to start via both services - one will likely fail but
             output "Attempting to start mongod service...."
             output "If this fails you will need to check how the Mongo service is setup for your system and manually start it"
-            service mongod start
-            systemctl enable mongod.service
+            systemctl daemon-reload
+            systemctl mongod start
+            systemctl enable mongod
             D_M_I=true
     fi
 
