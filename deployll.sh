@@ -1216,8 +1216,8 @@ MONGO_INSTALLED=false
 REDIS_INSTALLED=false
 PM2_OVERRIDE=false
 NODE_OVERRIDE=false
-NODE_VERSION=12.x
-NODE_VERSION_STRING=v12
+NODE_VERSION=10.x
+NODE_VERSION_STRING=v10
 UPDATE_MODE=false
 GIT_ASK=false
 GIT_REV=false
@@ -1762,6 +1762,12 @@ determine_os_version
 if [[ $NODE_OVERRIDE != false ]]; then
     NODE_VERSION=$NODE_OVERRIDE
 fi
+
+if [[ $ENTERPRISE == true ]]; then
+    NODE_VERSION=12.x
+    NODE_VERSION_STRING=v12
+fi
+
 output "Installing node version: $NODE_VERSION"
 
 if [[ $OS_VERSION == "Debian" ]]; then
