@@ -1331,9 +1331,13 @@ while getopts ":h:y:b:x:e:m:r:u:p:" OPT; do
         e)
             if [[ $OPTARG == "1" ]]; then
                 ENTERPRISE=true
+                NODE_VERSION=12.x
+                NODE_VERSION_STRING=v12
             elif [[ $OPTARG == "2" ]]; then
                 ENTERPRISE_IGNORE_STARTUP=true
                 ENTERPRISE=true
+                NODE_VERSION=12.x
+                NODE_VERSION_STRING=v12
             fi
         ;;
         m)
@@ -1762,6 +1766,7 @@ determine_os_version
 if [[ $NODE_OVERRIDE != false ]]; then
     NODE_VERSION=$NODE_OVERRIDE
 fi
+
 output "Installing node version: $NODE_VERSION"
 
 if [[ $OS_VERSION == "Debian" ]]; then
