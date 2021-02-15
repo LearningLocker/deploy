@@ -2530,6 +2530,12 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/AgentDependencies.tar.gz -O
         tar xvf AgentDependencies.tar.gz -C /tmp/
         python ./awslogs-agent-setup.py --region $REGION --dependency-path /tmp/AgentDependencies -n -c /tmp/devops/awslogs/awslogs.conf
+
+        if [[ -s /var/awslogs/etc/awslogs.conf ]];
+            output "/var/awslogs/etc/awslogs.conf appears to be empty re-running setup"
+            python ./awslogs-agent-setup.py --region $REGION --dependency-path /tmp/AgentDependencies -n -c /tmp/devops/awslogs/awslogs.conf
+        fi
+
     else
         output "No awslogs.conf so can't set up cloudfront"
     fi
