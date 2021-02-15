@@ -2531,7 +2531,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         tar xvf AgentDependencies.tar.gz -C /tmp/
         python ./awslogs-agent-setup.py --region $REGION --dependency-path /tmp/AgentDependencies -n -c /tmp/devops/awslogs/awslogs.conf
 
-        if [[ -s /var/awslogs/etc/awslogs.conf ]];
+        if [[ -s /var/awslogs/etc/awslogs.conf ]]; then
             output "/var/awslogs/etc/awslogs.conf appears to be empty re-running setup"
             python ./awslogs-agent-setup.py --region $REGION --dependency-path /tmp/AgentDependencies -n -c /tmp/devops/awslogs/awslogs.conf
         fi
