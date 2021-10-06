@@ -34,6 +34,17 @@ function yum_package ()
 # GENERIC FUNCTIONS IRRESPECTIVE OF OS  #
 #########################################
 
+# IP-148- creating 4GB swp space
+function create_swap_space ()
+{
+    fallocate -l 4GB /swapfile
+    dd if=/dev/zero of=/swapfile bs=1M count=4096
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo "/swap none    swap    sw    0   0" | tee -a /etc/fstab
+}
+
 # simple function to symlink useful commands
 function symlink_commands ()
 {
@@ -1167,6 +1178,9 @@ function fedora_mongo ()
 # before anything, make sure the tmp dir is large enough of get the user to specify a new one
 _TD=/tmp
 MIN_DISK_SPACE=3000000
+
+#IP-148 call the create_swap_space function to create 4GB of swap space before disk size check
+create_swap_space
 
 # check we have enough space available
 FREESPACE=`df $_TD | awk '/[0-9]%/{print $(NF-2)}'`
