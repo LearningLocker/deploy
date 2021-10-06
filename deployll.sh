@@ -706,8 +706,10 @@ function debian_install ()
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
         if [[ $OS_VNO == "18.04" ]]; then
+            update-ca-certificates
             apt-get -y -qq install net-tools curl wget git python build-essential apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
         else
+            update-ca-certificates
             apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
         fi
     fi
