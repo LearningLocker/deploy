@@ -37,12 +37,14 @@ function yum_package ()
 # IP-148- creating 4GB swp space
 function create_swap_space ()
 {
-    fallocate -l 4GB /swapfile
-    dd if=/dev/zero of=/swapfile bs=1M count=4096
-    chmod 600 /swapfile
-    mkswap /swapfile
-    swapon /swapfile
-    echo "/swapfile none swap sw 0 0" | tee -a /etc/fstab
+    echo "[LL] Creating 4GB swapfile and adding to fstab to automatically mount on boot..."
+    fallocate -l 4GB /swapfile >> $OUTPUT_LOG 2>>$ERROR_LOG
+    dd if=/dev/zero of=/swapfile bs=1M count=4096 >> $OUTPUT_LOG 2>>$ERROR_LOG
+    chmod 600 /swapfile >> $OUTPUT_LOG 2>>$ERROR_LOG
+    mkswap /swapfile >> $OUTPUT_LOG 2>>$ERROR_LOG
+    swapon /swapfile >> $OUTPUT_LOG 2>>$ERROR_LOG
+    echo "/swapfile none swap sw 0 0" | tee -a /etc/fstab >> $OUTPUT_LOG 2>>$ERROR_LOG
+    echo "[LL] swapfile created"
 }
 
 # simple function to symlink useful commands
@@ -706,11 +708,15 @@ function debian_install ()
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
         if [[ $OS_VNO == "18.04" ]]; then
-            update-ca-certificates
+            echo "[LL] updating CA certificates in the OS..."
+            update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get -y -qq install net-tools curl wget git python build-essential apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
+            echo "[LL] CA certificates updated" >> $OUTPUT_LOG 2>>$ERROR_LOG
         else
-            update-ca-certificates
+            echo "[LL] updating CA certificates in the OS..."
+            update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
+            echo "[LL] CA certificates updated" >> $OUTPUT_LOG 2>>$ERROR_LOG
         fi
     fi
 
