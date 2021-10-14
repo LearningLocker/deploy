@@ -42,7 +42,7 @@ function create_swap_space ()
     chmod 600 /swapfile
     mkswap /swapfile
     swapon /swapfile
-    echo "/swapfile none    swap    sw    0   0" | tee -a /etc/fstab
+    echo "/swapfile none swap sw 0 0" | tee -a /etc/fstab
 }
 
 # simple function to symlink useful commands
