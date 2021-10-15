@@ -37,14 +37,13 @@ function yum_package ()
 # IP-148- creating 4GB swp space
 function create_swap_space ()
 {
-    echo "[LL] Creating 4GB swapfile and adding to fstab to automatically mount on boot..."
-    fallocate -l 4GB /swapfile >> $OUTPUT_LOG 2>>$ERROR_LOG
-    dd if=/dev/zero of=/swapfile bs=1M count=4096 >> $OUTPUT_LOG 2>>$ERROR_LOG
-    chmod 600 /swapfile >> $OUTPUT_LOG 2>>$ERROR_LOG
-    mkswap /swapfile >> $OUTPUT_LOG 2>>$ERROR_LOG
-    swapon /swapfile >> $OUTPUT_LOG 2>>$ERROR_LOG
-    echo "/swapfile none swap sw 0 0" | tee -a /etc/fstab >> $OUTPUT_LOG 2>>$ERROR_LOG
-    echo "[LL] swapfile created"
+    output "Creating 4GB swapfile and adding to fstab to automatically mount on boot..."
+    fallocate -l 4GB /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile >> $OUTPUT_LOG
+    swapon /swapfile
+    echo "/swapfile none swap sw 0 0" | tee -a /etc/fstab >> $OUTPUT_LOG
+    output "swapfile created"
 }
 
 # simple function to symlink useful commands
@@ -708,15 +707,15 @@ function debian_install ()
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
         if [[ $OS_VNO == "18.04" ]]; then
-            echo "[LL] updating CA certificates in the OS..."
+            output "updating CA certificates in the OS..."
             update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
+            output "CA certificates updated"
             apt-get -y -qq install net-tools curl wget git python build-essential apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
-            echo "[LL] CA certificates updated" >> $OUTPUT_LOG 2>>$ERROR_LOG
         else
-            echo "[LL] updating CA certificates in the OS..."
+            output "updating CA certificates in the OS..."
             update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
+            output "CA certificates updated"
             apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
-            echo "[LL] CA certificates updated" >> $OUTPUT_LOG 2>>$ERROR_LOG
         fi
     fi
 
@@ -1172,6 +1171,10 @@ function fedora_mongo ()
     yum -y install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
+function create_log_files () {
+    mkdir -p $LOG_PATH
+    touch $OUTPUT_LOG
+}
 
 #################################################################################
 #################################################################################
@@ -1182,6 +1185,13 @@ function fedora_mongo ()
 #################################################################################
 #################################################################################
 #################################################################################
+
+# Set log file locations and create paths
+LOG_PATH=/var/log/learninglocker
+OUTPUT_LOG=${LOG_PATH}/install.log
+ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
+
+create_log_files
 
 # before anything, make sure the tmp dir is large enough of get the user to specify a new one
 _TD=/tmp
@@ -1246,13 +1256,10 @@ GIT_REV=false
 RELEASE_PATH=false
 SYMLINK_PATH=false
 MIN_MEMORY=970
-LOG_PATH=/var/log/learninglocker
-OUTPUT_LOG=${LOG_PATH}/install.log
 CLAM_INSTALL=false
 CLAM_PATH=false
 WEBAPP_SUBDIR="webapp"
 XAPI_SUBDIR="xapi"
-ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
 AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
