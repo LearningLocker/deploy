@@ -13,6 +13,57 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see http://www.gnu.org/licenses/.
 
+#################################################################################
+#                                DEFAULT VALUES                                 #
+#################################################################################
+UPI=false
+LOCAL_INSTALL=false
+PACKAGE_INSTALL=false
+DEFAULT_USER=learninglocker
+DEFAULT_SYMLINK_PATH=/usr/local/learninglocker/current
+DEFAULT_LOCAL_RELEASE_PATH=/usr/local/learninglocker/releases
+DEFAULT_PID_PATH=/var/run
+DEFAULT_INSTALL_TYPE=l
+LOCAL_PATH=false
+LOCAL_USER=false
+TMPDIR=$_TD/.tmpdist
+GIT_BRANCH="master"
+GIT_USER=false
+GIT_PASS=false
+XAPI_BRANCH="master"
+MIN_REDIS_VERSION="2.8.11"
+MIN_MONGO_VERSION="3.0.0"
+BUILDDIR="${_TD}/learninglocker"
+MONGO_INSTALLED=false
+REDIS_INSTALLED=false
+PM2_OVERRIDE=false
+NODE_OVERRIDE=false
+NODE_VERSION=10.x
+NODE_VERSION_STRING=v10
+UPDATE_MODE=false
+GIT_ASK=false
+GIT_REV=false
+RELEASE_PATH=false
+SYMLINK_PATH=false
+MIN_MEMORY=970
+LOG_PATH=/var/log/learninglocker
+OUTPUT_LOG=${LOG_PATH}/install.log
+ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
+CLAM_INSTALL=false
+CLAM_PATH=false
+WEBAPP_SUBDIR="webapp"
+XAPI_SUBDIR="xapi"
+JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
+BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
+AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
+WRITE_AUTOSETUP=false   # if -y is set to '4' then we will write to the output file (bottom of the script) for the auto generated credentials
+SETUP_AMI=false         # if -y is set to '5' then we bypass all questions, don't set up user but do clone out the deploy repo and prep for an AMI setup
+ENTERPRISE=false        # if true then do things specific to enterprise (ie: don't set up mongo or redis).
+                        # this is designed to be mostly the same as the OS model so search for this variable to see differences
+                        # Can be set with '-e 1' as a command line param - you'll need to have github access to the private repos for it to work
+ENTERPRISE_IGNORE_STARTUP=false
+FORCE_MONGO_NOINSTALL=false
+FORCE_REDIS_NOINSTALL=false
 
 #########################################
 #           PACKING FUNCTIONS           #
@@ -707,14 +758,10 @@ function debian_install ()
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
         if [[ $OS_VNO == "18.04" ]]; then
-            output "updating CA certificates in the OS..."
             update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
-            output "CA certificates updated"
             apt-get -y -qq install net-tools curl wget git python build-essential apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
         else
-            output "updating CA certificates in the OS..."
             update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
-            output "CA certificates updated"
             apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
         fi
     fi
@@ -1186,11 +1233,7 @@ function create_log_files () {
 #################################################################################
 #################################################################################
 
-# Set log file locations and create paths
-LOG_PATH=/var/log/learninglocker
-OUTPUT_LOG=${LOG_PATH}/install.log
-ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
-
+# create log file locations
 create_log_files
 
 # before anything, make sure the tmp dir is large enough of get the user to specify a new one
@@ -1220,58 +1263,6 @@ if [[ $FREESPACE -lt $MIN_DISK_SPACE ]]; then
         fi
     done
 fi
-
-
-
-#################################################################################
-#                                DEFAULT VALUES                                 #
-#################################################################################
-UPI=false
-LOCAL_INSTALL=false
-PACKAGE_INSTALL=false
-DEFAULT_USER=learninglocker
-DEFAULT_SYMLINK_PATH=/usr/local/learninglocker/current
-DEFAULT_LOCAL_RELEASE_PATH=/usr/local/learninglocker/releases
-DEFAULT_PID_PATH=/var/run
-DEFAULT_INSTALL_TYPE=l
-LOCAL_PATH=false
-LOCAL_USER=false
-TMPDIR=$_TD/.tmpdist
-GIT_BRANCH="master"
-GIT_USER=false
-GIT_PASS=false
-XAPI_BRANCH="master"
-MIN_REDIS_VERSION="2.8.11"
-MIN_MONGO_VERSION="3.0.0"
-BUILDDIR="${_TD}/learninglocker"
-MONGO_INSTALLED=false
-REDIS_INSTALLED=false
-PM2_OVERRIDE=false
-NODE_OVERRIDE=false
-NODE_VERSION=10.x
-NODE_VERSION_STRING=v10
-UPDATE_MODE=false
-GIT_ASK=false
-GIT_REV=false
-RELEASE_PATH=false
-SYMLINK_PATH=false
-MIN_MEMORY=970
-CLAM_INSTALL=false
-CLAM_PATH=false
-WEBAPP_SUBDIR="webapp"
-XAPI_SUBDIR="xapi"
-JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
-BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
-AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
-WRITE_AUTOSETUP=false   # if -y is set to '4' then we will write to the output file (bottom of the script) for the auto generated credentials
-SETUP_AMI=false         # if -y is set to '5' then we bypass all questions, don't set up user but do clone out the deploy repo and prep for an AMI setup
-ENTERPRISE=false        # if true then do things specific to enterprise (ie: don't set up mongo or redis).
-                        # this is designed to be mostly the same as the OS model so search for this variable to see differences
-                        # Can be set with '-e 1' as a command line param - you'll need to have github access to the private repos for it to work
-ENTERPRISE_IGNORE_STARTUP=false
-FORCE_MONGO_NOINSTALL=false
-FORCE_REDIS_NOINSTALL=false
-
 
 #################################################################################
 #                                 START CHECKS                                  #
