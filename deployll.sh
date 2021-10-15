@@ -13,57 +13,6 @@
 # You should have received a copy of the GNU General Public License along with this program.
 # If not, see http://www.gnu.org/licenses/.
 
-#################################################################################
-#                                DEFAULT VALUES                                 #
-#################################################################################
-UPI=false
-LOCAL_INSTALL=false
-PACKAGE_INSTALL=false
-DEFAULT_USER=learninglocker
-DEFAULT_SYMLINK_PATH=/usr/local/learninglocker/current
-DEFAULT_LOCAL_RELEASE_PATH=/usr/local/learninglocker/releases
-DEFAULT_PID_PATH=/var/run
-DEFAULT_INSTALL_TYPE=l
-LOCAL_PATH=false
-LOCAL_USER=false
-TMPDIR=$_TD/.tmpdist
-GIT_BRANCH="master"
-GIT_USER=false
-GIT_PASS=false
-XAPI_BRANCH="master"
-MIN_REDIS_VERSION="2.8.11"
-MIN_MONGO_VERSION="3.0.0"
-BUILDDIR="${_TD}/learninglocker"
-MONGO_INSTALLED=false
-REDIS_INSTALLED=false
-PM2_OVERRIDE=false
-NODE_OVERRIDE=false
-NODE_VERSION=10.x
-NODE_VERSION_STRING=v10
-UPDATE_MODE=false
-GIT_ASK=false
-GIT_REV=false
-RELEASE_PATH=false
-SYMLINK_PATH=false
-MIN_MEMORY=970
-LOG_PATH=/var/log/learninglocker
-OUTPUT_LOG=${LOG_PATH}/install.log
-ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
-CLAM_INSTALL=false
-CLAM_PATH=false
-WEBAPP_SUBDIR="webapp"
-XAPI_SUBDIR="xapi"
-JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
-BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
-AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
-WRITE_AUTOSETUP=false   # if -y is set to '4' then we will write to the output file (bottom of the script) for the auto generated credentials
-SETUP_AMI=false         # if -y is set to '5' then we bypass all questions, don't set up user but do clone out the deploy repo and prep for an AMI setup
-ENTERPRISE=false        # if true then do things specific to enterprise (ie: don't set up mongo or redis).
-                        # this is designed to be mostly the same as the OS model so search for this variable to see differences
-                        # Can be set with '-e 1' as a command line param - you'll need to have github access to the private repos for it to work
-ENTERPRISE_IGNORE_STARTUP=false
-FORCE_MONGO_NOINSTALL=false
-FORCE_REDIS_NOINSTALL=false
 
 #########################################
 #           PACKING FUNCTIONS           #
@@ -85,7 +34,7 @@ function yum_package ()
 # GENERIC FUNCTIONS IRRESPECTIVE OF OS  #
 #########################################
 
-# IP-148- creating 4GB swp space
+# creating 4GB swp space
 function create_swap_space ()
 {
     output "Creating 4GB swapfile and adding to fstab to automatically mount on boot..."
@@ -94,7 +43,7 @@ function create_swap_space ()
     mkswap /swapfile >> $OUTPUT_LOG
     swapon /swapfile
     echo "/swapfile none swap sw 0 0" | tee -a /etc/fstab >> $OUTPUT_LOG
-    output "swapfile created"
+    output "done!"
 }
 
 # simple function to symlink useful commands
@@ -1218,10 +1167,6 @@ function fedora_mongo ()
     yum -y install mongodb-server >> $OUTPUT_LOG 2>>$ERROR_LOG
 }
 
-function create_log_files () {
-    mkdir -p $LOG_PATH
-    touch $OUTPUT_LOG
-}
 
 #################################################################################
 #################################################################################
@@ -1233,36 +1178,59 @@ function create_log_files () {
 #################################################################################
 #################################################################################
 
-# create log file locations
-create_log_files
 
-# before anything, make sure the tmp dir is large enough of get the user to specify a new one
-_TD=/tmp
-MIN_DISK_SPACE=3000000
+#################################################################################
+#                                DEFAULT VALUES                                 #
+#################################################################################
+UPI=false
+LOCAL_INSTALL=false
+PACKAGE_INSTALL=false
+DEFAULT_USER=learninglocker
+DEFAULT_SYMLINK_PATH=/usr/local/learninglocker/current
+DEFAULT_LOCAL_RELEASE_PATH=/usr/local/learninglocker/releases
+DEFAULT_PID_PATH=/var/run
+DEFAULT_INSTALL_TYPE=l
+LOCAL_PATH=false
+LOCAL_USER=false
+TMPDIR=$_TD/.tmpdist
+GIT_BRANCH="master"
+GIT_USER=false
+GIT_PASS=false
+XAPI_BRANCH="master"
+MIN_REDIS_VERSION="2.8.11"
+MIN_MONGO_VERSION="3.0.0"
+BUILDDIR="${_TD}/learninglocker"
+MONGO_INSTALLED=false
+REDIS_INSTALLED=false
+PM2_OVERRIDE=false
+NODE_OVERRIDE=false
+NODE_VERSION=10.x
+NODE_VERSION_STRING=v10
+UPDATE_MODE=false
+GIT_ASK=false
+GIT_REV=false
+RELEASE_PATH=false
+SYMLINK_PATH=false
+MIN_MEMORY=970
+LOG_PATH=/var/log/learninglocker
+OUTPUT_LOG=${LOG_PATH}/install.log
+CLAM_INSTALL=false
+CLAM_PATH=false
+WEBAPP_SUBDIR="webapp"
+XAPI_SUBDIR="xapi"
+ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
+JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
+BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
+AUTOSETUPUSER=false     # if -y is set to '3' then we also automatically run through the user setup if we have to
+WRITE_AUTOSETUP=false   # if -y is set to '4' then we will write to the output file (bottom of the script) for the auto generated credentials
+SETUP_AMI=false         # if -y is set to '5' then we bypass all questions, don't set up user but do clone out the deploy repo and prep for an AMI setup
+ENTERPRISE=false        # if true then do things specific to enterprise (ie: don't set up mongo or redis).
+                        # this is designed to be mostly the same as the OS model so search for this variable to see differences
+                        # Can be set with '-e 1' as a command line param - you'll need to have github access to the private repos for it to work
+ENTERPRISE_IGNORE_STARTUP=false
+FORCE_MONGO_NOINSTALL=false
+FORCE_REDIS_NOINSTALL=false
 
-#IP-148 call the create_swap_space function to create 4GB of swap space before disk size check
-create_swap_space
-
-# check we have enough space available
-FREESPACE=`df $_TD | awk '/[0-9]%/{print $(NF-2)}'`
-if [[ $FREESPACE -lt $MIN_DISK_SPACE ]]; then
-    echo "[LL] your temp dir isn't large enough to continue, please enter a new path (pressing enter will exit)"
-    while true; do
-        if [[ $BYPASSALL == false ]]; then
-            output "In bypass mode - can't continue"
-            exit 0
-        fi
-        read n
-        if [[ $n == "" ]]; then
-            exit 0
-        elif [[ ! -d $n ]]; then
-            echo "[LL] Sorry but the directory '${n}' doesn't exist - please enter a valid one (press enter to exit)"
-        else
-            _TD=$n
-            break
-        fi
-    done
-fi
 
 #################################################################################
 #                                 START CHECKS                                  #
@@ -1295,7 +1263,7 @@ if [[ $EUID > 0 ]]; then
 fi
 
 if [[ ! `command -v openssl` ]]; then
-    output "Sorry but you need openssl installed to install"
+    output "Sorry but you need openssl installed to continue"
     exit 0
 fi
 
@@ -1315,6 +1283,33 @@ if [[ -f $OUTPUT_LOG ]]; then
     touch $OUTPUT_LOG
 fi
 
+# call the create_swap_space function to create 4GB of swap space before disk size check
+create_swap_space
+
+# make sure the tmp dir is large enough of get the user to specify a new one
+_TD=/tmp
+MIN_DISK_SPACE=3000000
+
+# check we have enough space available
+FREESPACE=`df $_TD | awk '/[0-9]%/{print $(NF-2)}'`
+if [[ $FREESPACE -lt $MIN_DISK_SPACE ]]; then
+    echo "[LL] your temp dir isn't large enough to continue, please enter a new path (pressing enter will exit)"
+    while true; do
+        if [[ $BYPASSALL == false ]]; then
+            output "In bypass mode - can't continue"
+            exit 0
+        fi
+        read n
+        if [[ $n == "" ]]; then
+            exit 0
+        elif [[ ! -d $n ]]; then
+            echo "[LL] Sorry but the directory '${n}' doesn't exist - please enter a valid one (press enter to exit)"
+        else
+            _TD=$n
+            break
+        fi
+    done
+fi
 
 #################################################################################
 #                                 GET USER INPUT                                #
