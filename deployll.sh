@@ -2537,14 +2537,20 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
         cd /tmp
 
         output "Installing required tools for cloudwatch...." true
-        apt-get install -y -qq libyaml-dev python-dev python-pip >> $OUTPUT_LOG 2>>$ERROR_LOG &
+        apt-get install -y -qq libyaml-dev python-dev python-pip >> $OUTPUT_LOG 2>>$ERROR_LOG
         print_spinner true
 
         output "installing cloudwatch tools...."
         curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py -O
         curl https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/AgentDependencies.tar.gz -O
         tar xvf AgentDependencies.tar.gz -C /tmp/
-        python ./awslogs-agent-setup.py --region $REGION --dependency-path /tmp/AgentDependencies -n -c /tmp/devops/awslogs/awslogs.conf
+        python ./awslogs-agent-setup.py --region $REGION --dependency-path /tmp/AgentDependencies -n -c /tmp/devops/awslogs/awslogs.conf >> $OUTPUT_LOG 2>>$ERROR_LOG
+
+        if [[ -s /var/awslogs/etc/awslogs.conf ]]; then
+            output "/var/awslogs/etc/awslogs.conf appears to be empty re-running setup"
+            python ./awslogs-agent-setup.py --region $REGION --dependency-path /tmp/AgentDependencies -n -c /tmp/devops/awslogs/awslogs.conf >> $OUTPUT_LOG 2>>$ERROR_LOG
+        fi
+
     else
         output "No awslogs.conf so can't set up cloudfront"
     fi
