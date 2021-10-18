@@ -34,6 +34,18 @@ function yum_package ()
 # GENERIC FUNCTIONS IRRESPECTIVE OF OS  #
 #########################################
 
+# creating 4GB swp space
+function create_swap_space ()
+{
+    output "Creating 4GB swapfile and adding to fstab to automatically mount on boot..."
+    fallocate -l 4GB /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile >> $OUTPUT_LOG
+    swapon /swapfile
+    echo "/swapfile none swap sw 0 0" | tee -a /etc/fstab >> $OUTPUT_LOG
+    output "done!"
+}
+
 # simple function to symlink useful commands
 function symlink_commands ()
 {
@@ -695,8 +707,10 @@ function debian_install ()
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
         if [[ $OS_VNO == "18.04" ]]; then
+            update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get -y -qq install net-tools curl wget git python build-essential apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
         else
+            update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get -y -qq install net-tools curl wget git python build-essential xvfb apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
         fi
     fi
@@ -1164,32 +1178,6 @@ function fedora_mongo ()
 #################################################################################
 #################################################################################
 
-# before anything, make sure the tmp dir is large enough of get the user to specify a new one
-_TD=/tmp
-MIN_DISK_SPACE=3000000
-
-# check we have enough space available
-FREESPACE=`df $_TD | awk '/[0-9]%/{print $(NF-2)}'`
-if [[ $FREESPACE -lt $MIN_DISK_SPACE ]]; then
-    echo "[LL] your temp dir isn't large enough to continue, please enter a new path (pressing enter will exit)"
-    while true; do
-        if [[ $BYPASSALL == false ]]; then
-            output "In bypass mode - can't continue"
-            exit 0
-        fi
-        read n
-        if [[ $n == "" ]]; then
-            exit 0
-        elif [[ ! -d $n ]]; then
-            echo "[LL] Sorry but the directory '${n}' doesn't exist - please enter a valid one (press enter to exit)"
-        else
-            _TD=$n
-            break
-        fi
-    done
-fi
-
-
 
 #################################################################################
 #                                DEFAULT VALUES                                 #
@@ -1275,7 +1263,7 @@ if [[ $EUID > 0 ]]; then
 fi
 
 if [[ ! `command -v openssl` ]]; then
-    output "Sorry but you need openssl installed to install"
+    output "Sorry but you need openssl installed to continue"
     exit 0
 fi
 
@@ -1295,6 +1283,33 @@ if [[ -f $OUTPUT_LOG ]]; then
     touch $OUTPUT_LOG
 fi
 
+# call the create_swap_space function to create 4GB of swap space before disk size check
+create_swap_space
+
+# make sure the tmp dir is large enough of get the user to specify a new one
+_TD=/tmp
+MIN_DISK_SPACE=3000000
+
+# check we have enough space available
+FREESPACE=`df $_TD | awk '/[0-9]%/{print $(NF-2)}'`
+if [[ $FREESPACE -lt $MIN_DISK_SPACE ]]; then
+    echo "[LL] your temp dir isn't large enough to continue, please enter a new path (pressing enter will exit)"
+    while true; do
+        if [[ $BYPASSALL == false ]]; then
+            output "In bypass mode - can't continue"
+            exit 0
+        fi
+        read n
+        if [[ $n == "" ]]; then
+            exit 0
+        elif [[ ! -d $n ]]; then
+            echo "[LL] Sorry but the directory '${n}' doesn't exist - please enter a valid one (press enter to exit)"
+        else
+            _TD=$n
+            break
+        fi
+    done
+fi
 
 #################################################################################
 #                                 GET USER INPUT                                #
