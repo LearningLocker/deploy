@@ -809,7 +809,7 @@ function debian_nginx ()
 
     output "installing nginx..."
     output "Setting up nginx repo (Stock Ubuntu version is too old)"
-    cd /tmp/ && wget http://nginx.org/keys/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG && cd - >> $OUTPUT_LOG 2>>$ERROR_LOG 
+    cd /tmp/ && wget http://nginx.org/keys/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG && cd - >> $OUTPUT_LOG 2>>$ERROR_LOG
     apt-key add /tmp/nginx_signing.key >> $OUTPUT_LOG 2>>$ERROR_LOG
     echo "deb https://nginx.org/packages/ubuntu/ $(lsb_release -cs) nginx" | tee /etc/apt/sources.list.d/Nginx.list >> $OUTPUT_LOG 2>>$ERROR_LOG
     apt update >> $OUTPUT_LOG 2>>$ERROR_LOG
@@ -1854,6 +1854,7 @@ print_spinner true
 if [[ $ENTERPRISE == true ]]; then
     output "Copying enterprise pm2 configs"
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker-low-priority.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker-low-priority.json
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/aggregation-worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/aggregation-worker.json
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
     cp ${BUILDDIR}/${XAPI_SUBDIR}/pm2/xapi.json.dist $TMPDIR/${XAPI_SUBDIR}/xapi.json
@@ -2095,6 +2096,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         output "reprocessing enterprise files"
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/webapp.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker-low-priority.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/aggregation-worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
     fi
