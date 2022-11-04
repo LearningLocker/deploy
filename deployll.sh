@@ -745,7 +745,7 @@ function debian_install ()
 
     if [[ $INSTALL_NODE == true ]]; then
         curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG
-        apt-get -y -qq install node >> $OUTPUT_LOG 2>>$ERROR_LOG
+        apt-get -y -qq install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
         output "Node.js already installed"
     fi
