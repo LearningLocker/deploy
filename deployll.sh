@@ -732,32 +732,32 @@ function debian_install ()
     fi
 
     INSTALL_NODE=false
-    if [[ ! `command -v nodejs` ]]; then
+    if [[ ! `command -v node` ]]; then
         INSTALL_NODE=true
-        output_log "installing nodejs"
-    elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+        output_log "installing node"
+    elif [[ `node --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         INSTALL_NODE=true
-        output_log "updating nodejs"
+        output_log "updating node"
     else
-        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        CUR_NODE_VERSION=`node --version | cut -d'.' -f 1`
         output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
     if [[ $INSTALL_NODE == true ]]; then
         curl -sL https://deb.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG
-        apt-get -y -qq install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG
+        apt-get -y -qq install node >> $OUTPUT_LOG 2>>$ERROR_LOG
     else
         output "Node.js already installed"
     fi
 
 
-    if [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
-        output "Something went wrong in installing/updating nodejs. This is likely a fault in your apt config. Can't continue"
+    if [[ `node --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+        output "Something went wrong in installing/updating node. This is likely a fault in your apt config. Can't continue"
         exit 0
     fi
 
 
-    INSTALLED_NODE_VERSION=`nodejs --version`
+    INSTALLED_NODE_VERSION=`node --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
         INSTALLED_NODE_VERSION=`node --version`
         if [[ $INSTALLED_NODE_VERSION == "" ]]; then
@@ -976,29 +976,29 @@ function redhat_install ()
     fi
 
     INSTALL_NODE=false
-    if [[ ! `command -v nodejs` ]]; then
+    if [[ ! `command -v node` ]]; then
         output_log "installing node"
         INSTALL_NODE=true
-    elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+    elif [[ `node --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         output_log "updating node"
         INSTALL_NODE=true
     else
-        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        CUR_NODE_VERSION=`node --version | cut -d'.' -f 1`
         output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
     if [[ $INSTALL_NODE == true ]]; then
-        output "setting up nodejs repo...." true
+        output "setting up node repo...." true
         curl --silent --location https://rpm.nodesource.com/setup_${NODE_VERSION} | bash - >> $OUTPUT_LOG 2>>$ERROR_LOG &
         print_spinner true
-        output "installing nodejs...." true
-        yum -y install nodejs >> $OUTPUT_LOG 2>>$ERROR_LOG &
+        output "installing node...." true
+        yum -y install node >> $OUTPUT_LOG 2>>$ERROR_LOG &
         print_spinner true
     else
         output "Node.js already installed"
     fi
 
-    INSTALLED_NODE_VERSION=`nodejs --version`
+    INSTALLED_NODE_VERSION=`node --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
         INSTALLED_NODE_VERSION=`node --version`
         if [[ $INSTALLED_NODE_VERSION == "" ]]; then
