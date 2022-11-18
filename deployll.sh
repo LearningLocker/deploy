@@ -732,14 +732,14 @@ function debian_install ()
     fi
 
     INSTALL_NODE=false
-    if [[ ! `command -v nodejs` ]]; then
+    if [[ ! `command -v node` ]]; then
         INSTALL_NODE=true
-        output_log "installing nodejs"
+        output_log "installing node"
     elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         INSTALL_NODE=true
-        output_log "updating nodejs"
+        output_log "updating node"
     else
-        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        CUR_NODE_VERSION=`node --version | cut -d'.' -f 1`
         output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
@@ -752,12 +752,12 @@ function debian_install ()
 
 
     if [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
-        output "Something went wrong in installing/updating nodejs. This is likely a fault in your apt config. Can't continue"
+        output "Something went wrong in installing/updating node. This is likely a fault in your apt config. Can't continue"
         exit 0
     fi
 
 
-    INSTALLED_NODE_VERSION=`nodejs --version`
+    INSTALLED_NODE_VERSION=`node --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
         INSTALLED_NODE_VERSION=`node --version`
         if [[ $INSTALLED_NODE_VERSION == "" ]]; then
