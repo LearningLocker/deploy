@@ -833,6 +833,12 @@ function debian_nginx ()
         rm /etc/nginx/conf.d/default.conf
     fi
     mv ${1}/nginx.conf.example $NGINX_CONFIG
+    
+    # Update default /etc/nginx/nginx.conf if updated configuration supplied
+    if [[ -f ${1}/__etc__nginx__nginx.conf ]]; then
+        mv ${1}/__etc__nginx__nginx.conf /etc/nginx/nginx.conf
+    fi
+    
     # sub in variables from the .envs to the nginx config
     if [[ $ENTERPRISE == true ]]; then
         setup_nginx_enterprise $NGINX_CONFIG $2
