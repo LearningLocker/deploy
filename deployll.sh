@@ -833,6 +833,12 @@ function debian_nginx ()
         rm /etc/nginx/conf.d/default.conf
     fi
     mv ${1}/nginx.conf.example $NGINX_CONFIG
+    
+    # Update default /etc/nginx/nginx.conf if updated configuration supplied
+    if [[ -f ${1}/__etc__nginx__nginx.conf ]]; then
+        mv ${1}/__etc__nginx__nginx.conf /etc/nginx/nginx.conf
+    fi
+    
     # sub in variables from the .envs to the nginx config
     if [[ $ENTERPRISE == true ]]; then
         setup_nginx_enterprise $NGINX_CONFIG $2
@@ -1866,6 +1872,13 @@ fi
 
 output_log "copying nginx.conf.example to $TMPDIR"
 cp ${BUILDDIR}/${WEBAPP_SUBDIR}/nginx.conf.example $TMPDIR/${WEBAPP_SUBDIR}/
+
+# Check for updated /etc/nginx/nginx.conf
+output_log "checking for __etc__nginx__nginx.conf"
+if [[ -f ${BUILDDIR}/${WEBAPP_SUBDIR}/__etc__nginx__nginx.conf ]]; then
+    output_log "copying __etc__nginx__nginx.conf to $TMPDIR"
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/__etc__nginx__nginx.conf $TMPDIR/${WEBAPP_SUBDIR}/
+fi
 
 output_log "copying ${BUILDDIR}/${WEBAPP_SUBDIR}/.git to $TMPDIR"
 cp -R ${BUILDDIR}/${WEBAPP_SUBDIR}/.git $TMPDIR/${WEBAPP_SUBDIR}/
