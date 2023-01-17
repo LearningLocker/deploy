@@ -731,15 +731,21 @@ function debian_install ()
         fi
     fi
 
+
     INSTALL_NODE=false
-    if [[ ! `command -v nodejs` ]]; then
+    
+    if [[ `command -v node` ]]; then
+        NODE_COMMAND="node"
+    fi
+    
+    if [[ ! `command -v $NODE_COMMAND` ]]; then
         INSTALL_NODE=true
         output_log "installing nodejs"
-    elif [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+    elif [[ `$NODE_COMMAND --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         INSTALL_NODE=true
         output_log "updating nodejs"
     else
-        CUR_NODE_VERSION=`nodejs --version | cut -d'.' -f 1`
+        CUR_NODE_VERSION=`$NODE_COMMAND --version | cut -d'.' -f 1`
         output_log "current node version is found as ${CUR_NODE_VERSION}"
     fi
 
@@ -750,20 +756,20 @@ function debian_install ()
         output "Node.js already installed"
     fi
 
+    if [[ `command -v node` ]]; then
+        NODE_COMMAND="node"
+    fi
 
-    if [[ `nodejs --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
+    if [[ `$NODE_COMMAND --version | cut -d'.' -f 1` != $NODE_VERSION_STRING ]]; then
         output "Something went wrong in installing/updating nodejs. This is likely a fault in your apt config. Can't continue"
         exit 0
     fi
 
 
-    INSTALLED_NODE_VERSION=`nodejs --version`
+    INSTALLED_NODE_VERSION=`$NODE_COMMAND --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-        INSTALLED_NODE_VERSION=`node --version`
-        if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-            output "ERROR :: node doesn't seem to be installed - exiting"
-            exit 1
-        fi
+        output "ERROR :: node doesn't seem to be installed - exiting"
+        exit 1
     fi
     output "node version - $INSTALLED_NODE_VERSION"
 
@@ -861,14 +867,18 @@ function debian_mongo ()
             if [[ $OS_VNO == "18.04" ]]; then
                 echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
             fi
+            if [[ $OS_VNO == "20.04" ]]; then
+                apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 20691eec35216c63caf66ce1656408e390cfb1f5 >> $OUTPUT_LOG 2>>$ERROR_LOG
+                echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.4.list
+            fi
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
-            systemctl unmask mongod
             apt-get -qq -y install mongodb-org >> $OUTPUT_LOG 2>>$ERROR_LOG
             # Attempt to start via both services - one will likely fail but
             output "Attempting to start mongod service...."
             output "If this fails you will need to check how the Mongo service is setup for your system and manually start it"
-            service mongod start
-            systemctl enable mongod.service
+            systemctl daemon-reload
+            systemctl enable mongod
+            systemctl start mongod 
             D_M_I=true
     fi
 
@@ -1212,6 +1222,7 @@ PM2_OVERRIDE=false
 NODE_OVERRIDE=false
 NODE_VERSION=10.x
 NODE_VERSION_STRING=v10
+NODE_COMMAND="nodejs"
 UPDATE_MODE=false
 GIT_ASK=false
 GIT_REV=false
