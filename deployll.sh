@@ -759,11 +759,8 @@ function debian_install ()
 
     INSTALLED_NODE_VERSION=`node --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-        INSTALLED_NODE_VERSION=`node --version`
-        if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-            output "ERROR :: node doesn't seem to be installed - exiting"
-            exit 1
-        fi
+        output "ERROR :: node doesn't seem to be installed - exiting"
+        exit 1
     fi
     output "node version - $INSTALLED_NODE_VERSION"
 
@@ -833,12 +830,12 @@ function debian_nginx ()
         rm /etc/nginx/conf.d/default.conf
     fi
     mv ${1}/nginx.conf.example $NGINX_CONFIG
-    
+
     # Update default /etc/nginx/nginx.conf if updated configuration supplied
     if [[ -f ${1}/__etc__nginx__nginx.conf ]]; then
         mv ${1}/__etc__nginx__nginx.conf /etc/nginx/nginx.conf
     fi
-    
+
     # sub in variables from the .envs to the nginx config
     if [[ $ENTERPRISE == true ]]; then
         setup_nginx_enterprise $NGINX_CONFIG $2
@@ -1006,11 +1003,8 @@ function redhat_install ()
 
     INSTALLED_NODE_VERSION=`node --version`
     if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-        INSTALLED_NODE_VERSION=`node --version`
-        if [[ $INSTALLED_NODE_VERSION == "" ]]; then
-            output "ERROR :: node doesn't seem to be installed - exiting"
-            exit 1
-        fi
+        output "ERROR :: node doesn't seem to be installed - exiting"
+        exit 1
     fi
     output "node version - $INSTALLED_NODE_VERSION"
 
