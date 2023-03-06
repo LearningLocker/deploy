@@ -84,9 +84,9 @@ function determine_os_version ()
         if [[ $OS_VNO == "" ]]; then
             OS_VNO=$(cat /etc/os-release | grep "VERSION_ID" | sed 's?VERSION_ID=??' | sed 's?"??g')
         fi
-        if [[ $OS_VNO == "14.04" ]]; then
+        if [[ $OS_VNO == "22.04" ]]; then
             NODE_OVERRIDE="6.x"
-            PM2_OVERRIDE="ubuntu14"
+            PM2_OVERRIDE="ubuntu22"
         fi
         output_log "Detected OS: ${OS_VERSION}, subver:${OS_SUBVER}, arch:${OS_ARCH}, vno:${OS_VNO}, NodeOverride: ${NODE_OVERRIDE}, PM2Override:${PM2_OVERRIDE}"
     elif [[ -f $REDHAT_FILE ]]; then
@@ -706,7 +706,7 @@ function debian_install ()
     # we run an apt-get update here in case the distro is out of date
     if [[ ! `command -v python` ]] || [[ ! `command -v curl` ]] || [[ ! `command -v wget` ]] || [[ ! `command -v git` ]] || [[ ! `command -v gcc` ]] || [[ ! `command -v g++` ]]; then
         apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
-        if [[ $OS_VNO == "18.04" ]]; then
+        if [[ $OS_VNO == "22.04" ]]; then
             update-ca-certificates >> $OUTPUT_LOG 2>>$ERROR_LOG
             apt-get -y -qq install net-tools curl wget git python build-essential apt-transport-https >> $OUTPUT_LOG 2>>$ERROR_LOG
         else
@@ -855,8 +855,8 @@ function debian_mongo ()
             if [[ $OS_VNO == "16.04" ]]; then
                 echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
             fi
-            if [[ $OS_VNO == "18.04" ]]; then
-                echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+            if [[ $OS_VNO == "22.04" ]]; then
+                echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/4.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.0.list
             fi
             apt-get update >> $OUTPUT_LOG 2>>$ERROR_LOG
             systemctl unmask mongod
