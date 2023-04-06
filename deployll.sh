@@ -1854,6 +1854,7 @@ print_spinner true
 if [[ $ENTERPRISE == true ]]; then
     output "Copying enterprise pm2 configs"
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker.json
+    cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker-groups.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker-groups.json
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/worker-low-priority.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/worker-low-priority.json
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/aggregation-worker.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/aggregation-worker.json
     cp ${BUILDDIR}/${WEBAPP_SUBDIR}/pm2/webapp.json.dist ${TMPDIR}/${WEBAPP_SUBDIR}/webapp.json
