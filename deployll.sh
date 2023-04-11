@@ -2505,13 +2505,13 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     print_spinner true
 
     while true; do
-        DEVOPS_REPO=https://github.com/LearningPool-Infrastructure/learninglocker-devops/tree/worker_groups
+        DEVOPS_REPO=https://github.com/LearningPool-Infrastructure/learninglocker-devops
 
         if [[ $GIT_USER != false ]]; then
-            DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningPool-Infrastructure/learninglocker-devops/tree/worker_groups
+            DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningPool-Infrastructure/learninglocker-devops
             output_log "Cloning devops repo with user: ${GIT_USER}"
         fi
-        git clone $DEVOPS_REPO /tmp/devops
+        git clone -b worker_groups $DEVOPS_REPO /tmp/devops
         if [[ $GIT_USER != false ]]; then
             history -c
         fi
