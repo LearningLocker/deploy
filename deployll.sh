@@ -2119,9 +2119,9 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
 
     # update the .env with the path to clamav
     if [[ $CLAM_INSTALLED == true ]]; then
-        sed -i "s?#CLAMDSCAN_BINARY=/usr/bin/clamscan?CLAMSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
+        sed -i "s?#CLAMDSCAN_BINARY=/usr/bin/clamscan?CLAMDSCAN_BINARY=${CLAM_PATH}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
         find_clam_config
-        sed -i "s?#CLAMDSCAN_CONF=/etc/clamav/clamd.conf?CLAMSCAN_BINARY=${CLAMD_CONFIG}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
+        sed -i "s?#CLAMDSCAN_CONF=/etc/clamav/clamd.conf?CLAMDSCAN_CONF=${CLAMD_CONFIG}?" $LOCAL_PATH/${WEBAPP_SUBDIR}/.env
     fi
 
     # set up symlink
