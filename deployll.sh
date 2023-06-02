@@ -530,22 +530,6 @@ function xapi_install ()
         done
     fi
 
-    # do the checkout in a loop in case the users enters user/pass incorrectly
-    if [[ $DO_XAPI_CHECKOUT -eq true ]]; then
-        # TODO - make this do a max itteration of say 3 attempts to clone
-        while true; do
-            output_log "attempting git clone for xapi, branch: $XAPI_BRANCH"
-            git clone -q -b ${XAPI_BRANCH} https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
-            if [[ ! -d ${XAPI_SUBDIR} ]]; then
-                output_log "git clone appears to have failed"
-                break
-            else
-                output_log "git clone succeeded"
-                break
-            fi
-        done
-    fi
-
     cd ${XAPI_SUBDIR}/
 
     # sort out .env
@@ -1196,7 +1180,6 @@ TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
 GIT_USER=false
 GIT_PASS=false
-XAPI_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
 BUILDDIR="${_TD}/learninglocker"
@@ -1217,7 +1200,7 @@ OUTPUT_LOG=${LOG_PATH}/install.log
 CLAM_INSTALL=false
 CLAM_PATH=false
 WEBAPP_SUBDIR="webapp"
-XAPI_SUBDIR="xapi"
+XAPI_SUBDIR="webapp/packages/xapi-service"
 ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
@@ -1339,9 +1322,6 @@ while getopts ":h:y:b:x:e:m:r:u:p:" OPT; do
         ;;
         b)
             GIT_BRANCH=$OPTARG
-        ;;
-        x)
-            XAPI_BRANCH=$OPTARG
         ;;
         e)
             if [[ $OPTARG == "1" ]]; then
