@@ -500,7 +500,7 @@ function base_install ()
 
 function xapi_install ()
 {
-    output "Will now try and clone the git repo for XAPI. May take some time...."
+    output "Will now build the xAPI Service. May take some time...."
     # not checking for presence of 'git' command as done in git_clone_base()
 
     DO_XAPI_CHECKOUT=true;
@@ -2505,14 +2505,14 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
 
     if [[ $ENTERPRISE_IGNORE_STARTUP == false ]]; then
         output "setting up env-fetch script"
-        cp startup_env_fetch_new.sh /usr/sbin/ll_startup_env_fetch_new.sh
-        chmod 755 /usr/sbin/ll_startup_env_fetch_new.sh
-        cp startup_env_fetch.service /lib/systemd/system/ll_startup_env_fetch.service
-        systemctl enable ll_startup_env_fetch
+        cp startup_env_fetch_embedded_xapi.sh /usr/sbin/startup_env_fetch_embedded_xapi.sh
+        chmod 755 /usr/sbin/startup_env_fetch_embedded_xapi.sh
+        cp startup_env_fetch_embedded_xapi.service /lib/systemd/system/startup_env_fetch_embedded_xapi.service
+        systemctl enable startup_env_fetch_embedded_xapi
 
         # tweak nginx loader to load after the new startup script
         output "setting nginx to require the env fetch first"
-        sed -i "s/After=/Requires=ll_startup_env_fetch.service\nAfter=/g" /lib/systemd/system/nginx.service
+        sed -i "s/After=/Requires=startup_env_fetch_embedded_xapi.service\nAfter=/g" /lib/systemd/system/nginx.service
         systemctl daemon-reload
     fi
 
