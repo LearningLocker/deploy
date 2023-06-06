@@ -2505,8 +2505,8 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
 
     if [[ $ENTERPRISE_IGNORE_STARTUP == false ]]; then
         output "setting up env-fetch script"
-        cp startup_env_fetch.sh /usr/sbin/ll_startup_env_fetch.sh
-        chmod 755 /usr/sbin/ll_startup_env_fetch.sh
+        cp startup_env_fetch_new.sh /usr/sbin/ll_startup_env_fetch_new.sh
+        chmod 755 /usr/sbin/ll_startup_env_fetch_new.sh
         cp startup_env_fetch.service /lib/systemd/system/ll_startup_env_fetch.service
         systemctl enable ll_startup_env_fetch
 
