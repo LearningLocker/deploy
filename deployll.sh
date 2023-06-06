@@ -2491,7 +2491,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
             DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningPool-Infrastructure/learninglocker-devops
             output_log "Cloning devops repo with user: ${GIT_USER}"
         fi
-        git clone $DEVOPS_REPO /tmp/devops
+        git clone -b LLC-2422 $DEVOPS_REPO /tmp/devops
         if [[ $GIT_USER != false ]]; then
             history -c
         fi
