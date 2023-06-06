@@ -2505,14 +2505,14 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
 
     if [[ $ENTERPRISE_IGNORE_STARTUP == false ]]; then
         output "setting up env-fetch script"
-        cp startup_env_fetch_embedded_xapi.sh /usr/sbin/startup_env_fetch_embedded_xapi.sh
-        chmod 755 /usr/sbin/startup_env_fetch_embedded_xapi.sh
-        cp startup_env_fetch_embedded_xapi.service /lib/systemd/system/startup_env_fetch_embedded_xapi.service
-        systemctl enable startup_env_fetch_embedded_xapi
+        cp startup_env_fetch.sh /usr/sbin/startup_env_fetch.sh
+        chmod 755 /usr/sbin/startup_env_fetch.sh
+        cp startup_env_fetch.service /lib/systemd/system/startup_env_fetch.service
+        systemctl enable startup_env_fetch
 
         # tweak nginx loader to load after the new startup script
         output "setting nginx to require the env fetch first"
-        sed -i "s/After=/Requires=startup_env_fetch_embedded_xapi.service\nAfter=/g" /lib/systemd/system/nginx.service
+        sed -i "s/After=/Requires=startup_env_fetch.service\nAfter=/g" /lib/systemd/system/nginx.service
         systemctl daemon-reload
     fi
 
