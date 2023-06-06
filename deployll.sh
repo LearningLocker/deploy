@@ -2469,7 +2469,7 @@ if [[ $SETUP_AMI == true ]]; then
         rm -R /tmp/deploy
     fi
     # git clone
-    git clone https://github.com/LearningLocker/deploy deploy
+    git clone -b LLC-2422 https://github.com/LearningLocker/deploy deploy
 fi
 
 
