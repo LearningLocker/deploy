@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Copyright (C) 2017-2019 HT2 Labs
-# LH
+#
 # This program is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of
 # the License, or (at your option) any later version.
@@ -500,7 +500,7 @@ function base_install ()
 
 function xapi_install ()
 {
-    output "Will now try and clone the git repo for XAPI. May take some time...."
+    output "Will now build the xAPI Service. May take some time...."
     # not checking for presence of 'git' command as done in git_clone_base()
 
     DO_XAPI_CHECKOUT=true;
@@ -530,22 +530,6 @@ function xapi_install ()
         done
     fi
 
-    # do the checkout in a loop in case the users enters user/pass incorrectly
-    if [[ $DO_XAPI_CHECKOUT -eq true ]]; then
-        # TODO - make this do a max itteration of say 3 attempts to clone
-        while true; do
-            output_log "attempting git clone for xapi, branch: $XAPI_BRANCH"
-            git clone -q -b ${XAPI_BRANCH} https://github.com/LearningLocker/xapi-service.git ${XAPI_SUBDIR}
-            if [[ ! -d ${XAPI_SUBDIR} ]]; then
-                output_log "git clone appears to have failed"
-                break
-            else
-                output_log "git clone succeeded"
-                break
-            fi
-        done
-    fi
-
     cd ${XAPI_SUBDIR}/
 
     # sort out .env
@@ -555,24 +539,6 @@ function xapi_install ()
             output "Copied example env to .env - This will need editing by hand"
         fi
     fi
-
-    # npm
-    #output "running npm install...." true
-    #npm install >> $OUTPUT_LOG 2>>$ERROR_LOG &
-    #print_spinner true
-
-    #output "running npm run build...." true
-    #npm run build >> $OUTPUT_LOG 2>>$ERROR_LOG &
-    #print_spinner true
-
-    # yarn
-    output "running yarn install...." true
-    yarn install --ignore-engines >> $OUTPUT_LOG 2>>$ERROR_LOG &
-    print_spinner true
-
-    output "running yarn build...." true
-    yarn build >> $OUTPUT_LOG 2>>$ERROR_LOG &
-    print_spinner true
 
     cd ../
 }
@@ -1196,7 +1162,6 @@ TMPDIR=$_TD/.tmpdist
 GIT_BRANCH="master"
 GIT_USER=false
 GIT_PASS=false
-XAPI_BRANCH="master"
 MIN_REDIS_VERSION="2.8.11"
 MIN_MONGO_VERSION="3.0.0"
 BUILDDIR="${_TD}/learninglocker"
@@ -1217,7 +1182,7 @@ OUTPUT_LOG=${LOG_PATH}/install.log
 CLAM_INSTALL=false
 CLAM_PATH=false
 WEBAPP_SUBDIR="webapp"
-XAPI_SUBDIR="xapi"
+XAPI_SUBDIR="webapp/packages/xapi-service"
 ERROR_LOG=$OUTPUT_LOG   # placeholder - only want one file for now, may be changed later
 JUSTDOIT=false          # variable set from CLI via the -y flag to just say yes to all the defaults
 BYPASSALL=false         # if -y is set to '2' then we bypass any and all questions
@@ -1339,9 +1304,6 @@ while getopts ":h:y:b:x:e:m:r:u:p:" OPT; do
         ;;
         b)
             GIT_BRANCH=$OPTARG
-        ;;
-        x)
-            XAPI_BRANCH=$OPTARG
         ;;
         e)
             if [[ $OPTARG == "1" ]]; then
@@ -2107,7 +2069,6 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker-low-priority.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/aggregation-worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
-        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker-groups.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
     fi
 
 
@@ -2512,7 +2473,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
             DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningPool-Infrastructure/learninglocker-devops
             output_log "Cloning devops repo with user: ${GIT_USER}"
         fi
-        git clone -b worker_groups $DEVOPS_REPO /tmp/devops
+        git clone $DEVOPS_REPO /tmp/devops
         if [[ $GIT_USER != false ]]; then
             history -c
         fi
