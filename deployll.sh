@@ -1,7 +1,6 @@
 #!/bin/bash
 #
 # Copyright (C) 2017-2019 HT2 Labs
-# LH
 # This program is free software: you can redistribute it and/or modify it under the terms of the
 # GNU General Public License as published by the Free Software Foundation, either version 3 of
 # the License, or (at your option) any later version.
@@ -2512,7 +2511,7 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
             DEVOPS_REPO=https://${GIT_USER}:${GIT_PASS}@github.com/LearningPool-Infrastructure/learninglocker-devops
             output_log "Cloning devops repo with user: ${GIT_USER}"
         fi
-        git clone -b worker_groups $DEVOPS_REPO /tmp/devops
+        git clone $DEVOPS_REPO /tmp/devops
         if [[ $GIT_USER != false ]]; then
             history -c
         fi
