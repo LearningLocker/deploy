@@ -2069,6 +2069,7 @@ if [[ $LOCAL_INSTALL == true ]] && [[ $UPDATE_MODE == false ]]; then
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker-low-priority.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/aggregation-worker.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
         reprocess_pm2 $TMPDIR/${XAPI_SUBDIR}/xapi.json ${SYMLINK_PATH}/${XAPI_SUBDIR} $LOG_PATH $PID_PATH
+        reprocess_pm2 $TMPDIR/${WEBAPP_SUBDIR}/worker-groups.json $SYMLINK_PATH/${WEBAPP_SUBDIR} $LOG_PATH $PID_PATH
     fi
 
 
