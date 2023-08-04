@@ -1308,13 +1308,13 @@ while getopts ":h:y:b:x:e:m:r:u:p:" OPT; do
         e)
             if [[ $OPTARG == "1" ]]; then
                 ENTERPRISE=true
-                NODE_VERSION=16.x
-                NODE_VERSION_STRING=v16
+                NODE_VERSION=18.x
+                NODE_VERSION_STRING=v18
             elif [[ $OPTARG == "2" ]]; then
                 ENTERPRISE_IGNORE_STARTUP=true
                 ENTERPRISE=true
-                NODE_VERSION=16.x
-                NODE_VERSION_STRING=v16
+                NODE_VERSION=18.x
+                NODE_VERSION_STRING=v18
             fi
         ;;
         m)
