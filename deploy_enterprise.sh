@@ -2467,6 +2467,13 @@ if [[ $SETUP_AMI == true ]] && [[ $ENTERPRISE == true ]]; then
     apt-get -y -qq install awscli redis-tools mongodb-clients >> $OUTPUT_LOG 2>>$ERROR_LOG &
     print_spinner true
 
+    output "Installing mongosh...." true
+    wget -qO- https://www.mongodb.org/static/pgp/server-6.0.asc | sudo tee /etc/apt/trusted.gpg.d/server-6.0.asc
+    echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
+    apt-get update
+    apt-get install -y mongodb-mongosh >> $OUTPUT_LOG 2>>$ERROR_LOG &
+    print_spinner true
+
     while true; do
         DEVOPS_REPO=https://github.com/LearningPool-Infrastructure/learninglocker-devops
 
